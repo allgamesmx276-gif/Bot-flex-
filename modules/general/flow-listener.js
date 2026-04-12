@@ -1,7 +1,7 @@
 const { getDB, saveDB, logEvent } = require('../../utils/db');
 const { readGroupDB, saveGroupDB } = require('../../utils/groupDb');
 const { startMsgAuto } = require('../../utils/msgAuto');
-const { isAdmin } = require('../../utils/permissions');
+const { isAdmin, hasRegisteredAdminAccess } = require('../../utils/permissions');
 
 const DEFAULT_OFFLINE_MESSAGE = 'El Administrador que buscas contactar no se encuentra activo en este momento, espera a que vuelva a conectarse';
 
@@ -66,7 +66,7 @@ module.exports = {
 
         // Modo offline sin prefijo: solo admins/owner.
         if (text === 'offline' || text === 'online') {
-            if (!await isAdmin(client, msg)) {
+            if (!hasRegisteredAdminAccess(msg) && !await isAdmin(client, msg)) {
                 msg._flexHandled = true;
                 return replyText('Solo admins pueden usar offline/online.');
             }

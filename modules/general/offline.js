@@ -1,5 +1,5 @@
 const { getDB, saveDB } = require('../../utils/db');
-const { isAdmin } = require('../../utils/permissions');
+const { isAdmin, hasRegisteredAdminAccess } = require('../../utils/permissions');
 
 const DEFAULT_OFFLINE_MESSAGE = 'El Administrador que buscas contactar no se encuentra activo en este momento, espera a que vuelva a conectarse';
 
@@ -12,7 +12,7 @@ module.exports = {
         const sender = msg.author || msg.from;
         const action = (args[0] || '').toLowerCase();
 
-        if (!await isAdmin(client, msg)) {
+        if (!hasRegisteredAdminAccess(msg) && !await isAdmin(client, msg)) {
             return msg.reply('Solo admins pueden usar este comando.');
         }
 
