@@ -1,0 +1,15 @@
+node_modules/
+.wwebjs_auth/
+.wwebjs_cache/
+storage/logs/
+storage/session-backups/
+storage/groups/
+storage/backups/
+*.log
+data.json
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+temp_groupdb_test.js
