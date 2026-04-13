@@ -2,6 +2,8 @@ function section(title, value) {
     return `${title}:\n${value}`;
 }
 
+const { getCommands } = require('../../handler');
+
 const HELP_BY_COMMAND = {
     convert: [
         section('Que hace', 'Convierte montos entre monedas y acepta formato rapido.'),
@@ -155,6 +157,27 @@ const HELP_BY_COMMAND = {
     ].join('\n\n')
 };
 
+function buildAutoHelp(commandDef) {
+    if (!commandDef) return null;
+
+    const name = commandDef.name || 'comando';
+    const category = commandDef.category || 'general';
+    const minPlan = commandDef.minPlan || (category === 'admin' ? 'basic' : category === 'owner' ? 'premium' : 'free');
+    const access = commandDef.ownerOnly
+        ? 'Solo owner'
+        : category === 'admin'
+            ? 'Admins del grupo y owner'
+            : 'Usuarios del grupo (segun plan)';
+
+    return [
+        section('Que hace', `Ejecuta la funcion del comando *${name}*.`),
+        section('Como usar', `.${name}`),
+        section('Como funciona', 'Recibe argumentos opcionales y procesa la accion definida para este comando.'),
+        section('Requisitos', `Categoria: ${category}\nPlan minimo: ${minPlan}\nAcceso: ${access}`),
+        section('Tip', `Si necesitas sintaxis exacta, prueba usar el comando y revisa su mensaje de uso. Ej: .${name}`)
+    ].join('\n\n');
+}
+
 module.exports = {
     name: 'ayuda',
     category: 'general',
@@ -168,10 +191,17 @@ module.exports = {
 
         const help = HELP_BY_COMMAND[command];
 
-        if (!help) {
-            return msg.reply(`No tengo ayuda registrada para: ${command}`);
+        if (help) {
+            return msg.reply(help);
         }
 
-        return msg.reply(help);
+        const commandDef = getCommands().find(cmd => cmd && cmd.name && cmd.name.toLowerCase() === command);
+        const autoHelp = buildAutoHelp(commandDef);
+
+        if (autoHelp) {
+            return msg.reply(autoHelp);
+        }
+
+        return msg.reply(`No tengo ayuda registrada para: ${command}`);
     }
 };
