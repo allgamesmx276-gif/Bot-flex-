@@ -18,6 +18,7 @@ function getExtension(mimetype) {
 module.exports = {
     name: 'setmenuimg',
     category: 'admin',
+    minPlan: 'premium',
 
     async execute(client, msg, args) {
         const chat = await msg.getChat();

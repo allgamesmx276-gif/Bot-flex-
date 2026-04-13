@@ -5,6 +5,7 @@ const { ok, error, warn } = require('../../utils/style');
 module.exports = {
     name: 'setmenuname',
     category: 'admin',
+    minPlan: 'premium',
 
     async execute(client, msg, args) {
         const chat = await msg.getChat();
