@@ -179,7 +179,7 @@ module.exports = {
             return;
         }
 
-        if (db.awaiting[sender] && !body.startsWith('.')) {
+        if (db.awaiting[sender] && !body.startsWith('.') && db.awaiting[sender].chatId === chatId) {
             const state = db.awaiting[sender];
 
             if (text === 'cancelar') {
