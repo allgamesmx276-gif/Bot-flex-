@@ -1,6 +1,7 @@
 const DEFAULT_UTILITY_ENTRIES = [
     ['perfil', 'perfil'],
     ['miranking', 'miranking'],
+    ['rangos', 'rangos'],
     ['convert', 'convert'],
     ['ayuda', 'ayuda'],
     ['tips', 'tips'],

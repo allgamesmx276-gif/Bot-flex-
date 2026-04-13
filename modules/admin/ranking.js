@@ -53,6 +53,8 @@ module.exports = {
             text += `${medal} ${rank.emoji} *${name}*  ${pts} pts\n`;
         }
 
+        text += '\nℹ️ Usa *.rangos* para ver requisitos y características.';
+
         return msg.reply(text.trim());
     }
 };
