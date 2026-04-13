@@ -118,6 +118,11 @@ module.exports = {
 
         const utilEntries = getOrderedUtilityEntries(db);
 
+        addBoxSection(
+            '🎉 DIVERSION',
+            filterLabelsByPlan(getOrderedMenuLabels(db, 'diversion'), 'general').map(cmd)
+        );
+
         const utilCommands = utilEntries
             .filter(([, fileBase]) => hasGeneralCommand(fileBase))
             .filter(([, fileBase]) => isCommandEnabledByPlan(fileBase, 'general'))

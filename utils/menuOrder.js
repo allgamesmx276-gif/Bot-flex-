@@ -34,6 +34,12 @@ const DEFAULT_UTILITY_ENTRIES = [
 ];
 
 const DEFAULT_MENU_SECTIONS = {
+    diversion: [
+        'matar',
+        'casarse',
+        'gay',
+        'lesbiana'
+    ],
     mod: [
         'statusbot',
         'menulogs',
@@ -102,6 +108,7 @@ const DEFAULT_MENU_SECTIONS = {
 
 const DEFAULT_SECTION_META = {
     utilities: { title: '🌐 UTILIDADES', domain: 'user', kind: 'default' },
+    diversion: { title: '🎉 DIVERSION', domain: 'user', kind: 'default' },
     mod: { title: '🧰 MOD', domain: 'admin', kind: 'default' },
     adminMsg: { title: '🛡️ ADMIN MSG', domain: 'admin', kind: 'default' },
     adminMod: { title: '🛡️ ADMIN MOD', domain: 'admin', kind: 'default' },
@@ -110,6 +117,7 @@ const DEFAULT_SECTION_META = {
 };
 
 const SECTION_ALIASES = {
+    diversion: 'diversion',
     mod: 'mod',
     adminmsg: 'adminMsg',
     'admin-msg': 'adminMsg',
@@ -152,7 +160,10 @@ function normalizeDomain(value) {
 
 function getAllowedLabelsForDomain(domain) {
     if (domain === 'user') {
-        return DEFAULT_UTILITY_ENTRIES.map(([label]) => normalizeLabel(label));
+        return [...new Set([
+            ...DEFAULT_UTILITY_ENTRIES.map(([label]) => normalizeLabel(label)),
+            ...DEFAULT_MENU_SECTIONS.diversion.map(normalizeLabel)
+        ])];
     }
 
     if (domain === 'admin') {
