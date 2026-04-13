@@ -41,7 +41,10 @@ const DEFAULT_DB = {
     afkUsers: {},
     reminders: {},
     userHistory: {},
-    polls: {}
+    polls: {},
+    userActivity: {},
+    userReactions: {},
+    pendingBroadcast: null
 };
 
 function normalizeDB(data = {}) {
@@ -81,7 +84,10 @@ function normalizeDB(data = {}) {
         afkUsers: data.afkUsers || {},
         reminders: data.reminders || {},
         userHistory: data.userHistory || {},
-        polls: data.polls || {}
+        polls: data.polls || {},
+        userActivity: data.userActivity && typeof data.userActivity === 'object' ? data.userActivity : {},
+        userReactions: data.userReactions && typeof data.userReactions === 'object' ? data.userReactions : {},
+        pendingBroadcast: data.pendingBroadcast || null
     };
 }
 

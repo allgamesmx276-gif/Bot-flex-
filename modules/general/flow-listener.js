@@ -200,9 +200,9 @@ module.exports = {
             if (state.step === 'setplan_days') {
                 const days = parseInt(body, 10);
 
-                if (isNaN(days) || days < 1) {
+                if (isNaN(days) || days < 0) {
                     msg._flexHandled = true;
-                    return msg.reply('❌ Ingresa un número válido de días (mínimo 1).');
+                    return msg.reply('❌ Ingresa un número válido de días (mínimo 1, o 0 para sin expiración).');
                 }
 
                 const { normalizePlan } = require('../../utils/planAccess');
@@ -211,27 +211,34 @@ module.exports = {
 
                 const targetChatId = state.chatId;
                 const plan = state.plan;
-                const expiryMs = Date.now() + days * 24 * 60 * 60 * 1000;
-                const expiryDate = new Date(expiryMs).toLocaleDateString('es-MX', {
-                    day: '2-digit', month: 'long', year: 'numeric'
-                });
-
                 const previousPlan = normalizePlan(db.groupPlans[targetChatId]) || 'free';
                 db.groupPlans[targetChatId] = plan;
-                db.groupPlanExpiry[targetChatId] = expiryMs;
                 delete db.awaiting[sender];
-                saveDB();
-                logEvent(`PLAN ${targetChatId}: ${previousPlan} -> ${plan} expira ${expiryDate}`);
-                auditAction({ author: sender, from: sender }, 'SET_GROUP_PLAN', {
-                    chatId: targetChatId, previousPlan, newPlan: plan, expiryDate
-                });
 
+                let replyText;
+                if (days === 0) {
+                    delete db.groupPlanExpiry[targetChatId];
+                    logEvent(`PLAN ${targetChatId}: ${previousPlan} -> ${plan} (sin expiración)`);
+                    auditAction({ author: sender, from: sender }, 'SET_GROUP_PLAN', {
+                        chatId: targetChatId, previousPlan, newPlan: plan, expiry: 'never'
+                    });
+                    replyText = `✅ Plan *${plan}* activado *sin expiración*\n🆔 Grupo: ${targetChatId}`;
+                } else {
+                    const expiryMs = Date.now() + days * 24 * 60 * 60 * 1000;
+                    const expiryDate = new Date(expiryMs).toLocaleDateString('es-MX', {
+                        day: '2-digit', month: 'long', year: 'numeric'
+                    });
+                    db.groupPlanExpiry[targetChatId] = expiryMs;
+                    logEvent(`PLAN ${targetChatId}: ${previousPlan} -> ${plan} expira ${expiryDate}`);
+                    auditAction({ author: sender, from: sender }, 'SET_GROUP_PLAN', {
+                        chatId: targetChatId, previousPlan, newPlan: plan, expiryDate
+                    });
+                    replyText = `✅ Plan *${plan}* activado por *${days} día(s)*\n📅 Vence: ${expiryDate}\n🆔 Grupo: ${targetChatId}`;
+                }
+
+                saveDB();
                 msg._flexHandled = true;
-                return msg.reply(
-                    `✅ Plan *${plan}* activado por *${days} día(s)*\n` +
-                    `📅 Vence: ${expiryDate}\n` +
-                    `🆔 Grupo: ${targetChatId}`
-                );
+                return msg.reply(replyText);
             }
 
             if (state.step === 'response') {

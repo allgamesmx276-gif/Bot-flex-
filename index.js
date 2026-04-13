@@ -6,6 +6,17 @@ const { readGroupDB } = require('./utils/groupDb');
 const { restartAllMsgAuto } = require('./utils/msgAuto');
 const logger = require('./utils/logger');
 const { backupNow } = require('./utils/backup');
+const { POSITIVE_REACTIONS, NEGATIVE_REACTIONS } = require('./utils/rankSystem');
+
+// Debounced save for activity tracking (avoids saving on every message)
+let activitySaveTimer = null;
+function scheduleActivitySave() {
+    if (activitySaveTimer) return;
+    activitySaveTimer = setTimeout(() => {
+        activitySaveTimer = null;
+        saveDB();
+    }, 5000);
+}
 
 const client = new Client({
     authStrategy: new LocalAuth(),
@@ -137,6 +148,26 @@ client.on('ready', () => {
         if (!db.config.ownerClaimed || !db.config.ownerNumber) {
             logger.info('⚠️  Owner no configurado. Envía .claimowner al bot por privado para registrarte como owner.');
         }
+
+        // Send pending broadcast if set
+        if (db.pendingBroadcast) {
+            const broadcastText = db.pendingBroadcast;
+            db.pendingBroadcast = null;
+            saveDB();
+            setTimeout(async () => {
+                try {
+                    const allChats = await client.getChats();
+                    const groups = allChats.filter(c => c.isGroup);
+                    for (const g of groups) {
+                        await client.sendMessage(g.id._serialized, broadcastText).catch(() => false);
+                        await new Promise(r => setTimeout(r, 800));
+                    }
+                    logger.info('pendingBroadcast enviado', { groups: groups.length });
+                } catch (err) {
+                    logger.error('Error enviando pendingBroadcast', { error: err.message });
+                }
+            }, 8000); // wait 8s for WA to be fully ready
+        }
     } catch (err) {
         logger.error('Error guardando bot number', { error: err.message });
     }
@@ -153,7 +184,55 @@ client.on('ready', () => {
 });
 
 client.on('message', async msg => {
+    // Track group activity
+    try {
+        if (msg.from && msg.from.endsWith('@g.us') && !msg.fromMe) {
+            const sender = msg.author || msg.from;
+            const chatId = msg.from;
+            const db = getDB();
+            if (!db.userActivity[chatId]) db.userActivity[chatId] = {};
+            if (!db.userActivity[chatId][sender]) db.userActivity[chatId][sender] = { msgs: 0, lastSeen: 0 };
+            db.userActivity[chatId][sender].msgs++;
+            db.userActivity[chatId][sender].lastSeen = Date.now();
+            scheduleActivitySave();
+        }
+    } catch (_) {}
+
     await handleMessage(client, msg);
+});
+
+client.on('message_reaction', async (reaction) => {
+    try {
+        if (!reaction || !reaction.reaction) return; // empty = reaction removed
+        const emoji = reaction.reaction;
+        const isPos = POSITIVE_REACTIONS.includes(emoji);
+        const isNeg = NEGATIVE_REACTIONS.includes(emoji);
+        if (!isPos && !isNeg) return;
+
+        const chatId = reaction.msgId && reaction.msgId.remote;
+        if (!chatId || !chatId.endsWith('@g.us')) return;
+
+        // Get author of the reacted message
+        let authorId = reaction.msgId.participant;
+        if (!authorId) {
+            const original = await client.getMessageById(reaction.msgId._serialized).catch(() => null);
+            if (!original) return;
+            authorId = original.author || original.from;
+        }
+        if (!authorId) return;
+        if (authorId === reaction.senderId) return; // skip self-reactions
+
+        const db = getDB();
+        if (!db.userReactions[chatId]) db.userReactions[chatId] = {};
+        if (!db.userReactions[chatId][authorId]) db.userReactions[chatId][authorId] = { pos: 0, neg: 0, detail: {} };
+
+        const data = db.userReactions[chatId][authorId];
+        if (isPos) data.pos++; else data.neg++;
+        data.detail[emoji] = (data.detail[emoji] || 0) + 1;
+        scheduleActivitySave();
+    } catch (err) {
+        logger.error('Error tracking reaction', { error: err.message });
+    }
 });
 
 client.on('message_create', async msg => {

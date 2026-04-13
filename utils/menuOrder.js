@@ -1,4 +1,6 @@
 const DEFAULT_UTILITY_ENTRIES = [
+    ['perfil', 'perfil'],
+    ['miranking', 'miranking'],
     ['convert', 'convert'],
     ['ayuda', 'ayuda'],
     ['tips', 'tips'],
@@ -49,6 +51,9 @@ const DEFAULT_MENU_SECTIONS = {
         'del-msg-auto'
     ],
     adminMod: [
+        'ranking',
+        'inactivos',
+        'expulsar-inactivos',
         'ban',
         'warn',
         'mutetime',
@@ -68,15 +73,26 @@ const DEFAULT_MENU_SECTIONS = {
         'online'
     ],
     ownerSys: [
+        'claimowner',
         'reload',
         'setowner',
         'setprefix',
         'addmod',
         'delmod',
         'listmods',
+        'listadmins',
         'delcmd',
         'disablecmd',
         'enablecmd',
+        'setcmdplan',
+        'checkcmds',
+        'setplan',
+        'bulksetplan',
+        'broadcast',
+        'setregisterkey',
+        'verregisterkey',
+        'setlogskey',
+        'cleanup-groups',
         'backupnow'
     ]
 };

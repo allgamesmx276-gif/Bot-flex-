@@ -5,6 +5,7 @@ const { isOwner, isAdmin } = require('../../utils/permissions');
 module.exports = {
     name: 'verplan',
     category: 'admin',
+    minPlan: 'free',
 
     async execute(client, msg) {
         const chat = await msg.getChat();

@@ -13,22 +13,27 @@ module.exports = {
         const db = getDB();
         const sender = msg.author || msg.from;
 
-        // Desde grupo: .setplan <plan> (sin expiración)
         if (chat.isGroup) {
+            // Desde grupo: .setplan <plan> — inicia flujo de días
             const requested = normalizePlan(args[0]);
 
             if (!requested) {
                 return msg.reply(warn(`Uso: .setplan <${PLAN_ORDER.join('|')}>`));
             }
 
-            const chatId = chat.id._serialized;
-            const previousPlan = normalizePlan(db.groupPlans[chatId]) || 'free';
-            db.groupPlans[chatId] = requested;
-            delete db.groupPlanExpiry[chatId];
+            const targetChatId = chat.id._serialized;
+            db.awaiting[sender] = {
+                step: 'setplan_days',
+                chatId: targetChatId,
+                plan: requested
+            };
             saveDB();
-            logEvent(`PLAN ${chatId}: ${previousPlan} -> ${requested} (sin expiración)`);
-            auditAction(msg, 'SET_GROUP_PLAN', { chatId, previousPlan, newPlan: requested });
-            return msg.reply(ok(`Plan actualizado: ${requested} (sin expiración)`));
+
+            return msg.reply(
+                `⏳ ¿Cuántos días tendrá el plan *${requested}*?\n\n` +
+                `Escribe el número de días (ej: 30) o *0* para sin expiración.\n` +
+                `Escribe "cancelar" para salir.`
+            );
         }
 
         // Desde privado: .setplan <groupId> <plan>
@@ -56,7 +61,11 @@ module.exports = {
         };
         saveDB();
 
-        return msg.reply(`⏳ ¿Cuántos días tendrá el plan *${requested}* el grupo?\n\nEscribe el número de días (ej: 30) o "cancelar" para salir.`);
+        return msg.reply(
+            `⏳ ¿Cuántos días tendrá el plan *${requested}* el grupo?\n\n` +
+            `Escribe el número de días (ej: 30) o *0* para sin expiración.\n` +
+            `Escribe "cancelar" para salir.`
+        );
     }
 };
 
