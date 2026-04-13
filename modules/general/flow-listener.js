@@ -553,7 +553,7 @@ module.exports = {
 
             if (groupDb.autoResponderEnabled) {
                 const match = groupDb.autoResponses.find(item =>
-                    text.includes(item.trigger.toLowerCase())
+                    text === String(item.trigger || '').trim().toLowerCase()
                 );
 
                 if (match) {
