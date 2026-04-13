@@ -1,7 +1,7 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { loadCommands, handleMessage } = require('./handler');
-const { ensureDB, getDB, saveDB } = require('./utils/db');
+const { ensureDB, getDB, saveDB, logEvent } = require('./utils/db');
 const { readGroupDB } = require('./utils/groupDb');
 const { restartAllMsgAuto } = require('./utils/msgAuto');
 const logger = require('./utils/logger');
@@ -267,6 +267,9 @@ client.on('group_join', async notification => {
         if (participantId && botId && participantId === botId) {
             const db = getDB();
             const ownerId = db.config && db.config.ownerNumber;
+            const currentPlan = (db.groupPlans && db.groupPlans[chatId]) || 'free';
+
+            logEvent(`BOT_JOIN ${chatId}: plan=${currentPlan}`);
 
             if (ownerId) {
                 const chat = await client.getChatById(chatId).catch(() => null);
@@ -295,6 +298,15 @@ client.on('group_join', async notification => {
 
                 await client.sendMessage(ownerId, text).catch(() => false);
             }
+
+            await client.sendMessage(
+                chatId,
+                `🤖 *FlexBot activado en este grupo*\n\n` +
+                `💼 Plan actual: *${currentPlan}*\n` +
+                `🔎 ID del grupo: ${chatId}\n\n` +
+                `Para activar o subir plan, el owner del bot debe usar:\n` +
+                `.setplan ${chatId} basic`
+            ).catch(() => false);
         }
 
         const groupDb = readGroupDB(chatId);
