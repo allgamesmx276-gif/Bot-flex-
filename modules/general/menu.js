@@ -41,7 +41,8 @@ module.exports = {
         const stateText = value => (groupDb ? stateIcon(Boolean(value)) : '⚪ N/A');
         const cmd = value => `${prefix}${value}`;
         const hasGeneralCommand = fileBase => fs.existsSync(path.join(GENERAL_DIR, `${fileBase}.js`));
-        const plan = getChatPlan(db, chat.isGroup ? chat.id._serialized : null);
+        const sender = msg.author || msg.from;
+        const plan = getChatPlan(db, chat.isGroup ? chat.id._serialized : null, sender);
         const commandMap = new Map(
             getCommands()
                 .filter(command => command && command.name && !command.auto)

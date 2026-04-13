@@ -168,7 +168,7 @@ module.exports = {
                 if (ownerId && ownerId !== sender) {
                     await client.sendMessage(
                         ownerId,
-                        `🔔 Nuevo admin registrado\nUsuario: ${sender}`
+                        `🔔 Nuevo admin registrado\nUsuario: ${sender}\nPlan asignado: ${(db.adminPlans && db.adminPlans[sender]) || 'ninguno (free)'}\n\nPara asignar plan:\n.setadminplan ${sender} basic`
                     ).catch(() => false);
                 }
             }

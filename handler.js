@@ -67,7 +67,8 @@ async function handleMessage(client, msg) {
         if (!owner) {
             const db = getDB();
             const chatId = msg.from;
-            const currentPlan = getChatPlan(db, chatId);
+            const sender = msg.author || msg.from;
+            const currentPlan = getChatPlan(db, chatId, sender);
             const requiredPlan = getRequiredPlan(command);
 
             if (!isPlanAllowed(currentPlan, requiredPlan)) {

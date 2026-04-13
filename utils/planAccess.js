@@ -28,13 +28,21 @@ function normalizePlan(value) {
     return PLAN_ORDER.includes(plan) ? plan : null;
 }
 
-function getChatPlan(db, chatId) {
+function getChatPlan(db, chatId, senderNumber) {
     if (!chatId || !chatId.endsWith('@g.us')) {
         return 'premium';
     }
 
-    const stored = db.groupPlans && db.groupPlans[chatId];
-    return normalizePlan(stored) || 'free';
+    const groupPlan = normalizePlan(db.groupPlans && db.groupPlans[chatId]) || 'free';
+
+    if (senderNumber && db.adminPlans && db.adminPlans[senderNumber]) {
+        const adminPlan = normalizePlan(db.adminPlans[senderNumber]) || 'free';
+        const groupIdx = PLAN_ORDER.indexOf(groupPlan);
+        const adminIdx = PLAN_ORDER.indexOf(adminPlan);
+        return PLAN_ORDER[Math.max(groupIdx, adminIdx)];
+    }
+
+    return groupPlan;
 }
 
 function getRequiredPlan(command) {
