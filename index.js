@@ -131,8 +131,12 @@ client.on('group_join', async notification => {
 
                 const text = [
                     '🔔 Bot agregado a un grupo',
-                    `Grupo nuevo: ${joinedGroupName}`,
+                    `Grupo: ${joinedGroupName}`,
+                    `ID: ${chatId}`,
                     `Total grupos: ${groups.length}`,
+                    '',
+                    `Para activar el plan desde aquí:`,
+                    `.setplan ${chatId} basic`,
                     '',
                     groups.length
                         ? `Grupos actuales:\n- ${groupNames}`
