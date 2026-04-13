@@ -18,6 +18,7 @@ const DEFAULT_DB = {
         custom: []
     },
     groupPlans: {},
+    groupPlanExpiry: {},
     commandPlans: {},
     adminPlans: {},
     admins: [],
@@ -57,6 +58,7 @@ function normalizeDB(data = {}) {
             ...(data.menuSections || {})
         },
         groupPlans: data.groupPlans && typeof data.groupPlans === 'object' ? data.groupPlans : {},
+        groupPlanExpiry: data.groupPlanExpiry && typeof data.groupPlanExpiry === 'object' ? data.groupPlanExpiry : {},
         commandPlans: data.commandPlans && typeof data.commandPlans === 'object' ? data.commandPlans : {},
         adminPlans: data.adminPlans && typeof data.adminPlans === 'object' ? data.adminPlans : {},
         admins: Array.isArray(data.admins) ? data.admins : [],

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const { getDB } = require('./utils/db');
-const { isOwner, isRegisteredAdmin } = require('./utils/permissions');
-const { getChatPlan, getRequiredPlan, isPlanAllowed } = require('./utils/planAccess');
+const { isOwner, isAdmin } = require('./utils/permissions');
+const { getChatPlan, getRequiredPlan, isPlanAllowed, isPlanExpired } = require('./utils/planAccess');
 const logger = require('./utils/logger');
 
 let commands = [];
@@ -60,19 +60,34 @@ async function handleMessage(client, msg) {
             return msg.reply('Solo el owner puede usar este comando');
         }
 
-        if (!owner && command.category === 'admin' && !isRegisteredAdmin(msg)) {
-            return msg.reply('Debes registrarte como admin para usar comandos admin');
+        if (!owner && command.category === 'admin' && !await isAdmin(client, msg)) {
+            return msg.reply('Solo los administradores del grupo pueden usar este comando');
         }
 
         if (!owner) {
             const db = getDB();
             const chatId = msg.from;
             const sender = msg.author || msg.from;
+
+            // Check if plan expired
+            if (isPlanExpired(db, chatId)) {
+                const expired = db.groupPlanExpiry && db.groupPlanExpiry[chatId];
+                const expiryDate = expired ? new Date(expired).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
+                // Reset to free
+                db.groupPlans[chatId] = 'free';
+                delete db.groupPlanExpiry[chatId];
+                const { saveDB } = require('./utils/db');
+                saveDB();
+            }
+
             const currentPlan = getChatPlan(db, chatId, sender);
             const requiredPlan = getRequiredPlan(command);
 
             if (!isPlanAllowed(currentPlan, requiredPlan)) {
-                return msg.reply(`Este comando requiere plan ${requiredPlan}. Plan actual: ${currentPlan}.`);
+                return msg.reply(`⚠️ Este comando requiere plan *${requiredPlan}*.
+💼 Plan actual: *${currentPlan}*
+
+Contacta al administrador del bot para activar un plan superior.`);
             }
         }
 

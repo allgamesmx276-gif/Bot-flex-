@@ -1,7 +1,7 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { loadCommands, handleMessage } = require('./handler');
-const { ensureDB, getDB } = require('./utils/db');
+const { ensureDB, getDB, saveDB } = require('./utils/db');
 const { readGroupDB } = require('./utils/groupDb');
 const { restartAllMsgAuto } = require('./utils/msgAuto');
 const logger = require('./utils/logger');
@@ -22,6 +22,58 @@ const client = new Client({
 });
 
 let hotReloadWatcher = null;
+
+function startPlanExpiryScheduler(client) {
+    const CHECK_INTERVAL = 60 * 60 * 1000; // cada hora
+
+    const check = async () => {
+        const db = getDB();
+        const expiries = db.groupPlanExpiry || {};
+        const now = Date.now();
+        const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
+        let changed = false;
+
+        for (const [chatId, expiryMs] of Object.entries(expiries)) {
+            if (!expiryMs) continue;
+            const timeLeft = expiryMs - now;
+
+            if (timeLeft <= 0) {
+                // Expirado → downgrade a free
+                const oldPlan = db.groupPlans[chatId] || 'free';
+                db.groupPlans[chatId] = 'free';
+                delete db.groupPlanExpiry[chatId];
+                changed = true;
+                logger.info('Plan expirado, downgrade a free', { chatId, oldPlan });
+
+                await client.sendMessage(chatId,
+                    `⚠️ *Tu plan ${oldPlan} ha vencido*\n\n` +
+                    `El grupo vuelve al plan *free*.\n` +
+                    `Para renovar contacta al administrador del bot.`
+                ).catch(() => false);
+
+            } else if (timeLeft <= THREE_DAYS) {
+                // Advertencia 3 días antes (una sola vez al aproximarse)
+                const daysLeft = Math.ceil(timeLeft / (24 * 60 * 60 * 1000));
+                const expiryDate = new Date(expiryMs).toLocaleDateString('es-MX', {
+                    day: '2-digit', month: 'long', year: 'numeric'
+                });
+
+                await client.sendMessage(chatId,
+                    `⏳ *Aviso: tu plan vence pronto*\n\n` +
+                    `Plan: *${db.groupPlans[chatId]}*\n` +
+                    `Vence: ${expiryDate} (${daysLeft} día(s))\n\n` +
+                    `Contacta al administrador del bot para renovar.`
+                ).catch(() => false);
+            }
+        }
+
+        if (changed) saveDB();
+    };
+
+    // Primera revisión al arrancar (con delay para que WA esté listo)
+    setTimeout(check, 10000);
+    setInterval(check, CHECK_INTERVAL);
+}
 
 function setupCommandHotReload() {
     if (hotReloadWatcher) return;
@@ -79,6 +131,7 @@ client.on('ready', () => {
     loadCommands();
     setupCommandHotReload();
     restartAllMsgAuto(client);
+    startPlanExpiryScheduler(client);
 });
 
 client.on('message', async msg => {

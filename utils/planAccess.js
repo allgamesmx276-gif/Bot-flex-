@@ -33,6 +33,13 @@ function getChatPlan(db, chatId, senderNumber) {
         return 'premium';
     }
 
+    // Check expiry
+    const expiry = db.groupPlanExpiry && db.groupPlanExpiry[chatId];
+    if (expiry && Date.now() > expiry) {
+        // Expired — treat as free (scheduler will clean up)
+        return 'free';
+    }
+
     const groupPlan = normalizePlan(db.groupPlans && db.groupPlans[chatId]) || 'free';
 
     if (senderNumber && db.adminPlans && db.adminPlans[senderNumber]) {
@@ -43,6 +50,12 @@ function getChatPlan(db, chatId, senderNumber) {
     }
 
     return groupPlan;
+}
+
+function isPlanExpired(db, chatId) {
+    if (!chatId || !chatId.endsWith('@g.us')) return false;
+    const expiry = db.groupPlanExpiry && db.groupPlanExpiry[chatId];
+    return expiry ? Date.now() > expiry : false;
 }
 
 function getRequiredPlan(command) {
@@ -75,6 +88,7 @@ module.exports = {
     DEFAULT_COMMAND_PLAN,
     normalizePlan,
     getChatPlan,
+    isPlanExpired,
     getRequiredPlan,
     isPlanAllowed
 };
