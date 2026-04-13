@@ -268,12 +268,12 @@ client.on('group_join', async notification => {
             const db = getDB();
             const ownerId = db.config && db.config.ownerNumber;
             const currentPlan = (db.groupPlans && db.groupPlans[chatId]) || 'free';
+            const chat = await client.getChatById(chatId).catch(() => null);
+            const joinedGroupName = chat && chat.name ? chat.name : chatId;
 
             logEvent(`BOT_JOIN ${chatId}: plan=${currentPlan}`);
 
             if (ownerId) {
-                const chat = await client.getChatById(chatId).catch(() => null);
-                const joinedGroupName = chat && chat.name ? chat.name : chatId;
                 const allChats = await client.getChats().catch(() => []);
                 const groups = allChats.filter(item => item && item.isGroup);
                 const groupNames = groups
@@ -302,10 +302,9 @@ client.on('group_join', async notification => {
             await client.sendMessage(
                 chatId,
                 `🤖 *FlexBot activado en este grupo*\n\n` +
-                `💼 Plan actual: *${currentPlan}*\n` +
-                `🔎 ID del grupo: ${chatId}\n\n` +
-                `Para activar o subir plan, el owner del bot debe usar:\n` +
-                `.setplan ${chatId} basic`
+                `🏷️ Grupo: *${joinedGroupName}*\n` +
+                `💼 Plan actual: *${currentPlan}*\n\n` +
+                `⬆️ *Mejorar plan*`
             ).catch(() => false);
         }
 

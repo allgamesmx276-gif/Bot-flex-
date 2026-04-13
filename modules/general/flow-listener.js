@@ -112,6 +112,32 @@ module.exports = {
             }
         }
 
+        if (chat.isGroup && (text === 'mejorar plan' || text === 'mejorarplan')) {
+            const ownerId = db.config && db.config.ownerNumber;
+
+            if (!ownerId) {
+                msg._flexHandled = true;
+                return replyText('⚠️ El owner del bot aún no está configurado.');
+            }
+
+            const currentPlan = (db.groupPlans && db.groupPlans[chatId]) || 'free';
+            const requester = sender;
+            const groupName = chat.name || chatId;
+
+            await client.sendMessage(
+                ownerId,
+                `📩 Solicitud de mejora de plan\n` +
+                `Grupo: ${groupName}\n` +
+                `ID: ${chatId}\n` +
+                `Plan actual: ${currentPlan}\n` +
+                `Solicitado por: ${requester}`
+            ).catch(() => false);
+
+            logEvent(`PLAN_REQUEST ${chatId}: ${requester} solicito mejorar plan`);
+            msg._flexHandled = true;
+            return replyText('✅ Solicitud enviada al owner por privado para mejorar el plan.');
+        }
+
         if (text === 'registrar admin') {
             if (!isPrivate) {
                 msg._flexHandled = true;
