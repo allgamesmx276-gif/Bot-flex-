@@ -38,7 +38,13 @@ const DEFAULT_MENU_SECTIONS = {
         'matar',
         'casarse',
         'gay',
-        'lesbiana'
+        'lesbiana',
+        'ship',
+        'simulador',
+        'ruleta',
+        'batalla',
+        'trivia',
+        'respuesta'
     ],
     mod: [
         'statusbot',
