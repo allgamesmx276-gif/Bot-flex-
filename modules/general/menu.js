@@ -32,7 +32,8 @@ module.exports = {
 
         const role = owner ? 'OWNER' : admin ? 'ADMIN' : moderator ? 'MOD' : 'USUARIO';
         const prefix = db.config.prefix || '.';
-        const canUseAdminMenu = owner || admin;
+        const hasPaidPlan = isPlanAllowed(plan, 'basic');
+        const canUseAdminMenu = owner || admin || hasPaidPlan;
         const canUseModeratorMenu = canUseAdminMenu || moderator;
         const headerLines = [];
         const bodyLines = [];
