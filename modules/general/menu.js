@@ -9,7 +9,7 @@ const { getCommands } = require('../../handler');
 const { getChatPlan, getRequiredPlan, isPlanAllowed } = require('../../utils/planAccess');
 
 const GENERAL_DIR = path.join(process.cwd(), 'modules', 'general');
-const MENU_HEADER_PATH = path.join(process.cwd(), 'storage', 'assets', 'menu-header.jpg');
+const DEFAULT_MENU_HEADER_PATH = path.join(process.cwd(), 'storage', 'assets', 'menu-header.jpg');
 
 module.exports = {
     name: 'menu',
@@ -70,7 +70,8 @@ module.exports = {
             bodyLines.push('');
         };
 
-        headerLines.push('🤖 FLEXBOT MODULAR');
+        const menuTitle = (groupDb && groupDb.menuTitle) || 'FLEXBOT MODULAR';
+        headerLines.push(`🤖 ${menuTitle}`);
         headerLines.push(`🏷️ ROL: ${role}`);
         headerLines.push(`⚙️ PREFIJO: ${prefix}`);
         headerLines.push(`🕒 HORA: ${requestTime}`);
@@ -153,8 +154,14 @@ module.exports = {
         const bodyText = bodyLines.join('\n');
         const fullText = `${headerText}\n\n${bodyText}`;
 
-        if (fs.existsSync(MENU_HEADER_PATH)) {
-            const media = MessageMedia.fromFilePath(MENU_HEADER_PATH);
+        const configuredImage = groupDb && groupDb.menuHeaderImage
+            ? path.resolve(process.cwd(), groupDb.menuHeaderImage)
+            : db.config.menuHeaderImage
+                ? path.resolve(process.cwd(), db.config.menuHeaderImage)
+                : DEFAULT_MENU_HEADER_PATH;
+
+        if (fs.existsSync(configuredImage)) {
+            const media = MessageMedia.fromFilePath(configuredImage);
             await msg.reply(media, undefined, { caption: fullText });
         } else {
             await msg.reply(fullText);

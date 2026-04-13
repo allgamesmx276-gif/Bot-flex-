@@ -68,6 +68,8 @@ const DEFAULT_MENU_SECTIONS = {
     ],
     adminCtrl: [
         'checkcmds',
+        'setmenuname',
+        'setmenuimg',
         'offline',
         'online'
     ],

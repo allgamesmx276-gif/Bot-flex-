@@ -6,6 +6,8 @@ const DEFAULT_BANNED_WORDS = require('./defaultBannedWords');
 const GROUP_DB_DIR = path.join(process.cwd(), 'storage', 'groups');
 
 const DEFAULT_GROUP_DB = {
+    menuTitle: '',
+    menuHeaderImage: '',
     welcome: false,
     welcomeMsg: '🎉 Bienvenido al grupo @user 🎉\nPreséntate y disfruta de la conversación.',
     goodbye: false,
@@ -22,6 +24,8 @@ const DEFAULT_GROUP_DB = {
 };
 
 const FEATURE_FILES = {
+    menuTitle: 'menu-title.json',
+    menuHeaderImage: 'menu-header-image.json',
     welcome: 'welcome.json',
     goodbye: 'goodbye.json',
     goodbyeMsg: 'goodbye-msg.json',
@@ -52,6 +56,8 @@ function isValidGroupChatId(value) {
 
 function normalizeGroupDB(data = {}) {
     return {
+        menuTitle: String(data.menuTitle || '').trim(),
+        menuHeaderImage: String(data.menuHeaderImage || '').trim(),
         welcome: Boolean(data.welcome),
         welcomeMsg: data.welcomeMsg || DEFAULT_GROUP_DB.welcomeMsg,
         goodbye: Boolean(data.goodbye),
@@ -105,6 +111,9 @@ function migrateLegacyGroupData(chatId) {
         const normalized = normalizeGroupDB(legacyData);
         const chatDir = ensureChatDir(chatId);
 
+        writeJSON(path.join(chatDir, FEATURE_FILES.menuTitle), normalized.menuTitle);
+        writeJSON(path.join(chatDir, FEATURE_FILES.menuHeaderImage), normalized.menuHeaderImage);
+
         writeJSON(path.join(chatDir, FEATURE_FILES.welcome), {
             welcome: normalized.welcome,
             welcomeMsg: normalized.welcomeMsg
@@ -149,6 +158,8 @@ function readGroupDB(chatId) {
         welcome: DEFAULT_GROUP_DB.welcome,
         welcomeMsg: DEFAULT_GROUP_DB.welcomeMsg
     });
+    const menuTitle = readJSON(path.join(chatDir, FEATURE_FILES.menuTitle), DEFAULT_GROUP_DB.menuTitle);
+    const menuHeaderImage = readJSON(path.join(chatDir, FEATURE_FILES.menuHeaderImage), DEFAULT_GROUP_DB.menuHeaderImage);
     const goodbye = readJSON(path.join(chatDir, FEATURE_FILES.goodbye), DEFAULT_GROUP_DB.goodbye);
     const goodbyeMsg = readJSON(path.join(chatDir, FEATURE_FILES.goodbyeMsg), DEFAULT_GROUP_DB.goodbyeMsg);
     const autoResponses = readJSON(path.join(chatDir, FEATURE_FILES.autoResponses), DEFAULT_GROUP_DB.autoResponses);
@@ -162,6 +173,8 @@ function readGroupDB(chatId) {
     const bannedWordsEnabled = readJSON(path.join(chatDir, FEATURE_FILES.bannedWordsEnabled), DEFAULT_GROUP_DB.bannedWordsEnabled);
 
     return normalizeGroupDB({
+        menuTitle,
+        menuHeaderImage,
         ...welcomeData,
         goodbye,
         goodbyeMsg,
@@ -184,6 +197,9 @@ function saveGroupDB(chatId, data) {
 
     const normalized = normalizeGroupDB(data);
     const chatDir = ensureChatDir(chatId);
+
+    writeJSON(path.join(chatDir, FEATURE_FILES.menuTitle), normalized.menuTitle);
+    writeJSON(path.join(chatDir, FEATURE_FILES.menuHeaderImage), normalized.menuHeaderImage);
 
     writeJSON(path.join(chatDir, FEATURE_FILES.welcome), {
         welcome: normalized.welcome,
