@@ -28,8 +28,12 @@ async function isAdmin(client, msg) {
 
         const chat = await msg.getChat();
         const senderId = msg.author || msg.from;
+        const normalizedSender = normalizeWhatsAppId(senderId);
 
-        const participant = chat.participants.find(p => p.id._serialized === senderId);
+        const participant = chat.participants.find(p => {
+            const participantId = p.id._serialized;
+            return participantId === senderId || normalizeWhatsAppId(participantId) === normalizedSender;
+        });
 
         return !!participant && (participant.isAdmin || participant.isSuperAdmin);
     } catch (err) {
