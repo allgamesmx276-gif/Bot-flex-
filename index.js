@@ -123,6 +123,24 @@ client.on('auth_failure', message => {
 
 client.on('ready', () => {
     logger.info('Bot listo');
+
+    // Save bot's own number
+    try {
+        const db = getDB();
+        const botWid = client.info && client.info.wid && client.info.wid._serialized;
+        if (botWid && db.config.botNumber !== botWid) {
+            db.config.botNumber = botWid;
+            saveDB();
+            logger.info('Bot number guardado', { botNumber: botWid });
+        }
+
+        if (!db.config.ownerClaimed || !db.config.ownerNumber) {
+            logger.info('⚠️  Owner no configurado. Envía .claimowner al bot por privado para registrarte como owner.');
+        }
+    } catch (err) {
+        logger.error('Error guardando bot number', { error: err.message });
+    }
+
     try {
         backupNow('startup');
     } catch (err) {

@@ -8,7 +8,9 @@ const DEFAULT_DB = {
         prefix: '.',
         registerKey: 'A9X7K2P4',
         logsKey: 'A1B2C3D4E5F6G7H8',
-        ownerNumber: '5218146214304@c.us',
+        ownerNumber: '',
+        ownerClaimed: false,
+        botNumber: '',
         menuHeaderImage: ''
     },
     menuOrder: {

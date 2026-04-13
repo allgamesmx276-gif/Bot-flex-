@@ -82,12 +82,15 @@ function hasModeratorAccess(msg) {
 function isOwner(msg) {
     const db = getDB();
     const ownerNumber = db.config.ownerNumber;
-    const normalizedOwner = normalizeWhatsAppId(ownerNumber);
-    const senders = getPossibleSenderIds(msg);
 
     if (msg.fromMe) {
         return true;
     }
+
+    if (!ownerNumber) return false;
+
+    const normalizedOwner = normalizeWhatsAppId(ownerNumber);
+    const senders = getPossibleSenderIds(msg);
 
     return senders.some(sender =>
         sender === ownerNumber ||
