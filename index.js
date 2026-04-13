@@ -301,10 +301,13 @@ client.on('group_join', async notification => {
 
             await client.sendMessage(
                 chatId,
-                `🤖 *FlexBot activado en este grupo*\n\n` +
+                `✨ *¡Bienvenidos a FlexBot!* ✨\n\n` +
                 `🏷️ Grupo: *${joinedGroupName}*\n` +
                 `💼 Plan actual: *${currentPlan}*\n\n` +
-                `⬆️ *Mejorar plan*`
+                `🚀 *Promo temporal activa*\n` +
+                `Escriban *Mejorar plan* en el chat\n` +
+                `y activamos *PREMIUM por 1 mes* para este grupo.\n\n` +
+                `🔥 Aprovechen esta activación especial.`
             ).catch(() => false);
         }
 

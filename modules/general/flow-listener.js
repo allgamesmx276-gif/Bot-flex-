@@ -115,27 +115,49 @@ module.exports = {
         if (chat.isGroup && (text === 'mejorar plan' || text === 'mejorarplan')) {
             const ownerId = db.config && db.config.ownerNumber;
 
-            if (!ownerId) {
-                msg._flexHandled = true;
-                return replyText('⚠️ El owner del bot aún no está configurado.');
-            }
-
             const currentPlan = (db.groupPlans && db.groupPlans[chatId]) || 'free';
             const requester = sender;
             const groupName = chat.name || chatId;
+            const now = Date.now();
+            const trialDays = 30;
+            const trialExpiry = now + trialDays * 24 * 60 * 60 * 1000;
+            const existingExpiry = db.groupPlanExpiry && db.groupPlanExpiry[chatId];
 
-            await client.sendMessage(
-                ownerId,
-                `📩 Solicitud de mejora de plan\n` +
-                `Grupo: ${groupName}\n` +
-                `ID: ${chatId}\n` +
-                `Plan actual: ${currentPlan}\n` +
-                `Solicitado por: ${requester}`
-            ).catch(() => false);
+            // Do not overwrite a longer existing premium period.
+            if (currentPlan === 'premium' && existingExpiry && existingExpiry > trialExpiry) {
+                msg._flexHandled = true;
+                return replyText('✅ Este grupo ya tiene un plan *premium* activo con mayor vigencia.');
+            }
 
-            logEvent(`PLAN_REQUEST ${chatId}: ${requester} solicito mejorar plan`);
+            db.groupPlans[chatId] = 'premium';
+            db.groupPlanExpiry[chatId] = trialExpiry;
+            saveDB();
+
+            const expiryDate = new Date(trialExpiry).toLocaleDateString('es-MX', {
+                day: '2-digit', month: 'long', year: 'numeric'
+            });
+
+            if (ownerId) {
+                await client.sendMessage(
+                    ownerId,
+                    `🎁 Promo activada automáticamente\n` +
+                    `Grupo: ${groupName}\n` +
+                    `ID: ${chatId}\n` +
+                    `Plan anterior: ${currentPlan}\n` +
+                    `Plan nuevo: premium (${trialDays} días)\n` +
+                    `Vence: ${expiryDate}\n` +
+                    `Solicitado por: ${requester}`
+                ).catch(() => false);
+            }
+
+            logEvent(`PLAN_PROMO ${chatId}: ${currentPlan} -> premium (${trialDays}d), requester=${requester}`);
             msg._flexHandled = true;
-            return replyText('✅ Solicitud enviada al owner por privado para mejorar el plan.');
+            return replyText(
+                `🎉 *¡Plan PREMIUM activado!*\n\n` +
+                `Este grupo recibió *1 mes premium* por promo temporal.\n` +
+                `📅 Vence: ${expiryDate}\n\n` +
+                `Disfruten todas las funciones avanzadas 🚀`
+            );
         }
 
         if (text === 'registrar admin') {
