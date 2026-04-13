@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { MessageMedia } = require('whatsapp-web.js');
 const { getDB } = require('../../utils/db');
-const { isAdmin, isModerator, isOwner, isRegisteredAdmin } = require('../../utils/permissions');
+const { isAdmin, isModerator, isOwner } = require('../../utils/permissions');
 const { readGroupDB } = require('../../utils/groupDb');
 const { getCustomSections, getOrderedMenuLabels, getOrderedUtilityEntries } = require('../../utils/menuOrder');
 const { getCommands } = require('../../handler');
@@ -20,7 +20,6 @@ module.exports = {
         const admin = await isAdmin(client, msg);
         const owner = isOwner(msg);
         const moderator = isModerator(msg);
-        const registeredAdmin = isRegisteredAdmin(msg);
         const chat = await msg.getChat();
         const groupDb = chat.isGroup ? readGroupDB(chat.id._serialized) : null;
         const now = new Date();
@@ -31,9 +30,9 @@ module.exports = {
             hour12: false
         });
 
-        const role = owner ? 'OWNER' : registeredAdmin ? 'ADMIN' : moderator ? 'MOD' : admin ? 'ADMIN' : 'USUARIO';
+        const role = owner ? 'OWNER' : admin ? 'ADMIN' : moderator ? 'MOD' : 'USUARIO';
         const prefix = db.config.prefix || '.';
-        const canUseAdminMenu = owner || registeredAdmin;
+        const canUseAdminMenu = owner || admin;
         const canUseModeratorMenu = canUseAdminMenu || moderator;
         const headerLines = [];
         const bodyLines = [];
@@ -73,9 +72,6 @@ module.exports = {
         headerLines.push(`🏷️ ROL: ${role}`);
         headerLines.push(`⚙️ PREFIJO: ${prefix}`);
         headerLines.push(`🕒 HORA: ${requestTime}`);
-        if (admin && !canUseAdminMenu) {
-            headerLines.push('❌ Registro para habilitar comandos admin');
-        }
         bodyLines.push('');
         headerLines.push(`💼 PLAN: ${plan.toUpperCase()}`);
 
