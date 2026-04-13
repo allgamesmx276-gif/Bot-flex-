@@ -1,5 +1,5 @@
 const { getCommands } = require('../../handler');
-const { hasModeratorAccess } = require('../../utils/permissions');
+const { isOwner } = require('../../utils/permissions');
 
 function formatUptime(totalSeconds) {
     const s = Math.floor(totalSeconds % 60);
@@ -12,10 +12,11 @@ function formatUptime(totalSeconds) {
 module.exports = {
     name: 'statusbot',
     category: 'admin',
+    ownerOnly: true,
 
     async execute(client, msg) {
-        if (!hasModeratorAccess(msg)) {
-            return msg.reply('Solo staff puede usar este comando.');
+        if (!isOwner(msg)) {
+            return msg.reply('Solo owner puede usar este comando.');
         }
 
         const mem = process.memoryUsage();

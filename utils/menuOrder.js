@@ -66,8 +66,6 @@ const DEFAULT_MENU_SECTIONS = {
         'resetbannedwords'
     ],
     adminCtrl: [
-        'menusection',
-        'movecmd',
         'checkcmds',
         'offline',
         'online'
@@ -85,6 +83,8 @@ const DEFAULT_MENU_SECTIONS = {
         'disablecmd',
         'enablecmd',
         'setcmdplan',
+        'menusection',
+        'movecmd',
         'checkcmds',
         'setplan',
         'bulksetplan',

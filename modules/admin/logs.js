@@ -1,9 +1,10 @@
 const { getDB } = require('../../utils/db');
-const { isRegisteredAdmin, isOwner } = require('../../utils/permissions');
+const { isOwner } = require('../../utils/permissions');
 
 module.exports = {
     name: 'logs',
     category: 'admin',
+    ownerOnly: true,
     hidden: true,
 
     async execute(client, msg) {
@@ -11,8 +12,8 @@ module.exports = {
 
         if (chat.isGroup) return;
 
-        if (!isRegisteredAdmin(msg) && !isOwner(msg)) {
-            return msg.reply('❌ Solo admins o el owner pueden ver logs');
+        if (!isOwner(msg)) {
+            return msg.reply('❌ Solo el owner puede ver logs');
         }
 
         const db = getDB();

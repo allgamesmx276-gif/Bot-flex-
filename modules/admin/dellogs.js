@@ -1,9 +1,10 @@
 const { getDB, saveDB } = require('../../utils/db');
-const { isRegisteredAdmin, isOwner } = require('../../utils/permissions');
+const { isOwner } = require('../../utils/permissions');
 
 module.exports = {
     name: 'dellogs',
     category: 'admin',
+    ownerOnly: true,
     hidden: true,
 
     async execute(client, msg, args) {
@@ -11,8 +12,8 @@ module.exports = {
 
         if (chat.isGroup) return;
 
-        if (!isRegisteredAdmin(msg) && !isOwner(msg)) {
-            return msg.reply('❌ Solo admins o el owner pueden borrar logs');
+        if (!isOwner(msg)) {
+            return msg.reply('❌ Solo el owner puede borrar logs');
         }
 
         const num = parseInt(args[0], 10);

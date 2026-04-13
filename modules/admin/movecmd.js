@@ -1,15 +1,16 @@
 const { getDB, saveDB } = require('../../utils/db');
 const { auditAction } = require('../../utils/audit');
-const { isOwner, isRegisteredAdmin } = require('../../utils/permissions');
+const { isOwner } = require('../../utils/permissions');
 const { moveMenuCommand } = require('../../utils/menuOrder');
 
 module.exports = {
     name: 'movecmd',
     category: 'admin',
+    ownerOnly: true,
 
     async execute(client, msg, args) {
-        if (!isOwner(msg) && !isRegisteredAdmin(msg)) {
-            return msg.reply('Solo owner o admins registrados pueden mover comandos.');
+        if (!isOwner(msg)) {
+            return msg.reply('Solo owner puede mover comandos.');
         }
 
         if (args.length < 2) {

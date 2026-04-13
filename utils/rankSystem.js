@@ -2,11 +2,11 @@ const POSITIVE_REACTIONS = ['❤️', '🔥', '👍', '😍', '💯', '🎉', '�
 const NEGATIVE_REACTIONS = ['👎', '💔', '🤮', '😒', '😡', '🤦', '🙄'];
 
 const RANKS = [
-    { min: -Infinity, max: -1,       emoji: '💀', name: 'Tóxico'     },
-    { min: 0,         max: 19,       emoji: '🌱', name: 'Nuevo'      },
-    { min: 20,        max: 59,       emoji: '⭐', name: 'Popular'    },
-    { min: 60,        max: 149,      emoji: '💎', name: 'Influyente' },
-    { min: 150,       max: Infinity, emoji: '👑', name: 'Leyenda'    }
+    { min: -Infinity, max: 19,       emoji: '🌱', name: 'Novato'   },
+    { min: 20,        max: 59,       emoji: '🪖', name: 'Recluta'  },
+    { min: 60,        max: 149,      emoji: '🛡️', name: 'Veterano' },
+    { min: 150,       max: 299,      emoji: '💎', name: 'Elite'    },
+    { min: 300,       max: Infinity, emoji: '👑', name: 'Leyenda'  }
 ];
 
 function getPoints(reactionData) {

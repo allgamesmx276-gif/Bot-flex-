@@ -54,6 +54,7 @@ module.exports = {
             if (!name) return false;
 
             const command = commandMap.get(name) || { name, category: fallbackCategory || 'general' };
+            if (command.ownerOnly && !owner) return false;
             const requiredPlan = getRequiredPlan(command);
             return isPlanAllowed(plan, requiredPlan);
         };
@@ -75,11 +76,6 @@ module.exports = {
         headerLines.push(`🕒 HORA: ${requestTime}`);
         bodyLines.push('');
         headerLines.push(`💼 PLAN: ${plan.toUpperCase()}`);
-
-        if (canUseModeratorMenu) {
-            const modCommands = filterLabelsByPlan(getOrderedMenuLabels(db, 'mod'), 'admin').map(cmd);
-            addBoxSection('🧰 MOD', modCommands);
-        }
 
         if (canUseAdminMenu) {
             if (isPlanAllowed(plan, 'basic')) {

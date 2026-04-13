@@ -1,6 +1,6 @@
 const { getDB, saveDB } = require('../../utils/db');
 const { auditAction } = require('../../utils/audit');
-const { isOwner, isRegisteredAdmin } = require('../../utils/permissions');
+const { isOwner } = require('../../utils/permissions');
 const {
     createCustomSection,
     deleteCustomSection,
@@ -12,10 +12,11 @@ const {
 module.exports = {
     name: 'menusection',
     category: 'admin',
+    ownerOnly: true,
 
     async execute(client, msg, args) {
-        if (!isOwner(msg) && !isRegisteredAdmin(msg)) {
-            return msg.reply('Solo owner o admins registrados pueden usar este comando.');
+        if (!isOwner(msg)) {
+            return msg.reply('Solo owner puede usar este comando.');
         }
 
         const action = String(args[0] || '').trim().toLowerCase();
