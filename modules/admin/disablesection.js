@@ -13,6 +13,11 @@ module.exports = {
         const db = getDB();
         const plan = getChatPlan(db, chat.id._serialized);
         if (!isPlanAllowed(plan, 'premium')) return msg.reply('Solo para grupos con plan premium');
+
+        // Debug: mostrar admins detectados
+        const adminList = chat.participants.filter(p => p.isAdmin || p.isSuperAdmin).map(p => p.id._serialized);
+        await msg.reply('Admins detectados por el bot:\n' + adminList.join('\n'));
+
         if (!await isAdmin(client, msg) && !isOwner(msg)) return msg.reply('Solo admin/owner pueden usar este comando');
         const section = (args[0] || '').toLowerCase();
         if (!section) return msg.reply('Indica la sección a ocultar. Ejemplo: .disablesection diversion');
