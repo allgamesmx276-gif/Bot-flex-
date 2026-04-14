@@ -13,8 +13,9 @@ module.exports = {
             return msg.reply(error('Solo en grupos'));
         }
 
-        if (!isRegisteredAdmin(msg)) {
-            return msg.reply(error('Debes registrarte como admin primero'));
+        const { hasModeratorAccess } = require('../../utils/permissions');
+        if (!hasModeratorAccess(msg) && !isRegisteredAdmin(msg)) {
+            return msg.reply(error('Solo admins o moderadores pueden usar este comando'));
         }
 
         const word = args.join(' ').trim().toLowerCase();

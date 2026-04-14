@@ -13,8 +13,9 @@ module.exports = {
                 return msg.reply('Este comando solo funciona en grupos');
             }
 
-            if (!await isAdmin(client, msg)) {
-                return msg.reply('Solo admins pueden usar este comando');
+            const { hasModeratorAccess } = require('../../utils/permissions');
+            if (!hasModeratorAccess(msg) && !await isAdmin(client, msg)) {
+                return msg.reply('Solo admins o moderadores pueden usar este comando');
             }
 
             if (!await isBotAdmin(client, msg)) {
