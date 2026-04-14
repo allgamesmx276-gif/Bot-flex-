@@ -31,7 +31,7 @@ async function getManageableGroups(client, sender, db) {
 module.exports = {
     name: 'cofre',
     category: 'general',
-    minPlan: 'basic',
+    minPlan: 'free',
 
     async execute(client, msg, args) {
         const chat = await msg.getChat();
