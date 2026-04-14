@@ -220,6 +220,7 @@ const HELP_BY_COMMAND = {
         section('Que hace', 'Activa o desactiva respuestas por palabra clave exacta.'),
         section('Como usar', '.auto-responder on | off | ver'),
         section('Como funciona', 'Solo responde cuando el mensaje coincide exactamente con la clave guardada.'),
+        section('Flujo despues de activar', '1) .auto-responder on\n2) .add-auto-responder\n3) Envia palabra clave\n4) Envia la respuesta\n5) Verifica con .list-auto-responder\n6) Elimina con .del-auto-responder <numero> si hace falta'),
         section('Ejemplo', '.auto-responder on')
     ].join('\n\n'),
     'add-auto-responder': [
