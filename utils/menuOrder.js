@@ -83,7 +83,9 @@ const DEFAULT_MENU_SECTIONS = {
         'setmenuname',
         'setmenuimg',
         'offline',
-        'online'
+        'online',
+        'reporte',
+        'comentario'
     ],
     ownerSys: [
         'claimowner',
