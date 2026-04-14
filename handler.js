@@ -30,10 +30,24 @@ function loadCommands() {
 }
 
 async function handleMessage(client, msg) {
-    const prefix = getDB().config.prefix || '.';
+    const dbState = getDB();
+    const prefix = dbState.config.prefix || '.';
     const automaticCommands = commands.filter(cmd => cmd.auto);
 
     if (!msg.body) return;
+
+    const body = String(msg.body || '').trim();
+    const isPrefixed = body.startsWith(prefix);
+    const inputParts = isPrefixed
+        ? body.slice(prefix.length).trim().split(/ +/)
+        : [];
+    const inputCommandName = (inputParts.shift() || '').toLowerCase();
+
+    // Global pause mode: bot process stays online but ignores all messages,
+    // except the .bot command used to reactivate it.
+    if (dbState.config && dbState.config.botPaused) {
+        if (!isPrefixed || inputCommandName !== 'bot') return;
+    }
 
     for (const cmd of automaticCommands) {
         try {
@@ -44,9 +58,9 @@ async function handleMessage(client, msg) {
     }
 
     if (msg._flexHandled) return;
-    if (!msg.body.startsWith(prefix)) return;
+    if (!isPrefixed) return;
 
-    const args = msg.body.slice(prefix.length).trim().split(/ +/);
+    const args = body.slice(prefix.length).trim().split(/ +/);
     const commandName = args.shift().toLowerCase();
 
     const command = commands.find(cmd => !cmd.auto && cmd.name === commandName);

@@ -81,6 +81,7 @@ const DEFAULT_MENU_SECTIONS = {
     ],
     adminCtrl: [
         'checkcmds',
+        'bot',
         'setmenuname',
         'setmenuimg',
         'offline',

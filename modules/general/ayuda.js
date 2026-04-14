@@ -250,6 +250,13 @@ const HELP_BY_COMMAND = {
         section('Desde privado', 'Envía *.cofre activar* al bot desde privado — detecta tus grupos y lanza un flujo guiado con preguntas paso a paso.'),
         section('Ejemplo', '.cofre config modo suerte → .cofre config prob 25 → .cofre activar')
     ].join('\n\n'),
+    bot: [
+        section('Que hace', 'Pone el bot en ON/OFF sin apagar el proceso.'),
+        section('Como usar', '.bot on | off | ver'),
+        section('Como funciona', 'En OFF el bot queda en linea pero no responde mensajes ni comandos. Solo acepta .bot on para reactivarse.'),
+        section('Acceso', 'Admins del grupo (ADMIN CTRL).'),
+        section('Ejemplo', '.bot off')
+    ].join('\n\n'),
 
     // ── COMANDOS ADMIN ───────────────────────────────────────────────────────
     ban: [

@@ -10,6 +10,7 @@ const DEFAULT_DB = {
         logsKey: 'A1B2C3D4E5F6G7H8',
         ownerNumber: '',
         ownerClaimed: false,
+        botPaused: false,
         botNumber: '',
         menuHeaderImage: ''
     },
