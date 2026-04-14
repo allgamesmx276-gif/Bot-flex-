@@ -154,6 +154,55 @@ const HELP_BY_COMMAND = {
         section('Como usar', '.respuesta <numero>'),
         section('Como funciona', 'Valida tu opcion, compara con la correcta y cierra la trivia.'),
         section('Ejemplo', '.respuesta 2')
+    ].join('\n\n'),
+    'msg-auto': [
+        section('Que hace', 'Activa o desactiva el envio de mensajes automaticos por intervalo en el grupo.'),
+        section('Como usar', '.msg-auto on | off | ver'),
+        section('Como funciona', 'Necesita que existan mensajes en la lista msg-auto.\nCon *on* inicia el scheduler del grupo, con *off* lo detiene.'),
+        section('Flujo recomendado', '1) .add-msg-auto\n2) Escribe el mensaje\n3) Define el tiempo: 10s / 5m / 1h\n4) .msg-auto on'),
+        section('Ejemplo', '.msg-auto on')
+    ].join('\n\n'),
+    'add-msg-auto': [
+        section('Que hace', 'Agrega un mensaje automatico nuevo para el grupo.'),
+        section('Como usar', '.add-msg-auto'),
+        section('Como funciona', 'Abre un flujo en 2 pasos: primero mensaje, luego intervalo.\nIntervalo valido: s (segundos), m (minutos), h (horas).'),
+        section('Ejemplo', '.add-msg-auto  -> "Recuerden leer reglas" -> 30m')
+    ].join('\n\n'),
+    'list-msg-auto': [
+        section('Que hace', 'Lista los mensajes automaticos configurados y su tiempo en ms.'),
+        section('Como usar', '.list-msg-auto'),
+        section('Como funciona', 'Muestra indice, contenido y tiempo. Ese indice se usa para eliminar con del-msg-auto.'),
+        section('Ejemplo', '.list-msg-auto')
+    ].join('\n\n'),
+    'del-msg-auto': [
+        section('Que hace', 'Elimina un mensaje automatico de la lista por numero.'),
+        section('Como usar', '.del-msg-auto <numero>'),
+        section('Como funciona', 'Borra el item indicado y reinicia la configuracion de msg-auto del grupo.'),
+        section('Ejemplo', '.del-msg-auto 2')
+    ].join('\n\n'),
+    'auto-responder': [
+        section('Que hace', 'Activa o desactiva respuestas por palabra clave exacta.'),
+        section('Como usar', '.auto-responder on | off | ver'),
+        section('Como funciona', 'Solo responde cuando el mensaje coincide exactamente con la clave guardada.'),
+        section('Ejemplo', '.auto-responder on')
+    ].join('\n\n'),
+    'add-auto-responder': [
+        section('Que hace', 'Agrega una clave y su respuesta automatica.'),
+        section('Como usar', '.add-auto-responder'),
+        section('Como funciona', 'Inicia flujo: primero palabra clave, luego respuesta.\nLa coincidencia es exacta, no parcial.'),
+        section('Ejemplo', '.add-auto-responder  -> "hola" -> "Hola, bienvenido"')
+    ].join('\n\n'),
+    'list-auto-responder': [
+        section('Que hace', 'Muestra la lista de claves y respuestas configuradas.'),
+        section('Como usar', '.list-auto-responder'),
+        section('Como funciona', 'Enumera cada regla para que puedas revisar o borrar por indice.'),
+        section('Ejemplo', '.list-auto-responder')
+    ].join('\n\n'),
+    'del-auto-responder': [
+        section('Que hace', 'Elimina una regla de auto-respuesta por numero.'),
+        section('Como usar', '.del-auto-responder <numero>'),
+        section('Como funciona', 'Borra la regla seleccionada de la lista del grupo.'),
+        section('Ejemplo', '.del-auto-responder 1')
     ].join('\n\n')
 };
 
