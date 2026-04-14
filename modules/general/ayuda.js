@@ -240,6 +240,371 @@ const HELP_BY_COMMAND = {
         section('Como usar', '.del-auto-responder <numero>'),
         section('Como funciona', 'Borra la regla seleccionada de la lista del grupo.'),
         section('Ejemplo', '.del-auto-responder 1')
+    ].join('\n\n'),
+
+    // ── COMANDOS ADMIN ───────────────────────────────────────────────────────
+    ban: [
+        section('Que hace', 'Expulsa un usuario del grupo.'),
+        section('Como usar', '.ban @usuario | responde un mensaje del usuario'),
+        section('Como funciona', 'Verifica permisos, obtiene el ID del usuario mencionado o del mensaje respondido y lo remueve del grupo.'),
+        section('Requisitos', 'El bot debe ser admin del grupo. Solo admins pueden usarlo.'),
+        section('Tip', 'Genera registro de auditoria del evento.')
+    ].join('\n\n'),
+    warn: [
+        section('Que hace', 'Advierte un usuario y lo expulsa al alcanzar 3 advertencias.'),
+        section('Como usar', '.warn @usuario | responde un mensaje del usuario'),
+        section('Como funciona', 'Registra advertencias en la base de datos del grupo. Al llegar a 3 warns expulsa automaticamente y resetea el contador.'),
+        section('Requisitos', 'Bot admin del grupo. Solo admins.'),
+        section('Tip', 'Para ver warns actuales de un usuario ejecuta .warn sin argumentos.')
+    ].join('\n\n'),
+    welcome: [
+        section('Que hace', 'Activa o desactiva el mensaje de bienvenida al entrar nuevos miembros.'),
+        section('Como usar', '.welcome on | off | ver'),
+        section('Como funciona', 'Guarda la bandera en la base del grupo. Al ingresar alguien se envia el mensaje configurado con .setwelcome.'),
+        section('Flujo recomendado', '1) .setwelcome <tu mensaje>\n2) .welcome on'),
+        section('Ejemplo', '.welcome on')
+    ].join('\n\n'),
+    setwelcome: [
+        section('Que hace', 'Configura el mensaje de bienvenida personalizado del grupo.'),
+        section('Como usar', '.setwelcome <mensaje>'),
+        section('Como funciona', 'Guarda el texto en la base del grupo. Se envia cuando entra un nuevo miembro si .welcome esta activo.'),
+        section('Ejemplo', '.setwelcome Bienvenido al grupo, lee las reglas antes de participar.')
+    ].join('\n\n'),
+    goodbye: [
+        section('Que hace', 'Activa o desactiva el mensaje de despedida cuando un miembro sale.'),
+        section('Como usar', '.goodbye on | off | ver'),
+        section('Como funciona', 'Guarda la bandera en la base del grupo. Al salir alguien se envia el mensaje configurado con .setgoodbye.'),
+        section('Flujo recomendado', '1) .setgoodbye <tu mensaje>\n2) .goodbye on'),
+        section('Ejemplo', '.goodbye on')
+    ].join('\n\n'),
+    setgoodbye: [
+        section('Que hace', 'Configura el mensaje de despedida personalizado del grupo.'),
+        section('Como usar', '.setgoodbye <mensaje>'),
+        section('Como funciona', 'Guarda el texto en la base del grupo. Se envia cuando un miembro abandona el grupo si .goodbye esta activo.'),
+        section('Ejemplo', '.setgoodbye Hasta luego, fue un placer tenerte aqui.')
+    ].join('\n\n'),
+    'anti-link': [
+        section('Que hace', 'Activa o desactiva proteccion contra enlaces en el grupo.'),
+        section('Como usar', '.anti-link on | off'),
+        section('Como funciona', 'Cuando esta activo detecta y elimina mensajes con links. Agrega warns al usuario por cada link enviado.'),
+        section('Requisitos', 'Bot admin del grupo. Solo admins.'),
+        section('Tip', 'Al llegar a 3 warns por links el usuario es expulsado automaticamente.')
+    ].join('\n\n'),
+    'anti-delete': [
+        section('Que hace', 'Activa o desactiva proteccion contra eliminacion de mensajes.'),
+        section('Como usar', '.anti-delete on | off'),
+        section('Como funciona', 'Cuando esta activo guarda mensajes y los recupera si alguien los elimina, publicando el contenido original.'),
+        section('Requisitos', 'Bot admin del grupo. Solo admins.'),
+        section('Tip', 'Util para auditar grupos con actividad importante.')
+    ].join('\n\n'),
+    bannedwords: [
+        section('Que hace', 'Lista, activa o desactiva el filtro de palabras prohibidas del grupo.'),
+        section('Como usar', '.bannedwords on | off | ver'),
+        section('Como funciona', 'Muestra palabras predefinidas y personalizadas. Cuando activo filtra mensajes automaticamente.'),
+        section('Comandos relacionados', '.addbannedword, .delbannedword, .resetbannedwords'),
+        section('Ejemplo', '.bannedwords ver')
+    ].join('\n\n'),
+    addbannedword: [
+        section('Que hace', 'Agrega una palabra a la lista de prohibidas del grupo.'),
+        section('Como usar', '.addbannedword <palabra>'),
+        section('Como funciona', 'Convierte a minusculas, verifica duplicados y agrega a la lista del grupo.'),
+        section('Ejemplo', '.addbannedword insulto')
+    ].join('\n\n'),
+    delbannedword: [
+        section('Que hace', 'Elimina una palabra de la lista de prohibidas del grupo.'),
+        section('Como usar', '.delbannedword <palabra>'),
+        section('Como funciona', 'Busca la palabra en la lista personalizada del grupo y la elimina.'),
+        section('Ejemplo', '.delbannedword insulto')
+    ].join('\n\n'),
+    resetbannedwords: [
+        section('Que hace', 'Restaura la lista de palabras prohibidas a las predefinidas por defecto.'),
+        section('Como usar', '.resetbannedwords'),
+        section('Como funciona', 'Copia la lista DEFAULT a la lista del grupo, eliminando todas las palabras personalizadas agregadas.'),
+        section('Advertencia', 'Destruye la lista personalizada. No se puede deshacer.')
+    ].join('\n\n'),
+    mutetime: [
+        section('Que hace', 'Silencia temporalmente un usuario por el tiempo que indiques.'),
+        section('Como usar', '.mutetime <tiempo> @usuario'),
+        section('Como funciona', 'Parsea duracion (s/m/h), calcula timestamp de expiracion y guarda en la base. El usuario no puede chatear hasta que expire.'),
+        section('Formatos', '30s = 30 segundos\n5m = 5 minutos\n1h = 1 hora'),
+        section('Ejemplo', '.mutetime 10m @usuario')
+    ].join('\n\n'),
+    unmute: [
+        section('Que hace', 'Desmuetea un usuario silenciado antes de que expire su tiempo.'),
+        section('Como usar', '.unmute @usuario | responde un mensaje del usuario'),
+        section('Como funciona', 'Busca al usuario en la lista de muteados y lo elimina, permitiendo que vuelva a chatear.'),
+        section('Ejemplo', '.unmute @usuario')
+    ].join('\n\n'),
+    open: [
+        section('Que hace', 'Abre el grupo para que todos los miembros puedan escribir mensajes.'),
+        section('Como usar', '.open'),
+        section('Como funciona', 'Ejecuta setMessagesAdminsOnly(false) en WhatsApp, permitiendo mensajes de todos.'),
+        section('Requisitos', 'El bot debe ser admin del grupo. Solo admins pueden usarlo.')
+    ].join('\n\n'),
+    close: [
+        section('Que hace', 'Cierra el grupo para que solo los admins puedan escribir.'),
+        section('Como usar', '.close'),
+        section('Como funciona', 'Ejecuta setMessagesAdminsOnly(true) en WhatsApp, bloqueando mensajes de miembros regulares.'),
+        section('Requisitos', 'El bot debe ser admin del grupo. Solo admins pueden usarlo.')
+    ].join('\n\n'),
+    verplan: [
+        section('Que hace', 'Muestra el plan actual del grupo y cuantos dias quedan hasta vencimiento.'),
+        section('Como usar', '.verplan'),
+        section('Como funciona', 'Lee el plan y la fecha de expiracion registrada en la base global del bot.'),
+        section('Tip', 'Muestra "sin expiracion" si el plan fue asignado con 0 dias.')
+    ].join('\n\n'),
+    ranking: [
+        section('Que hace', 'Muestra el top 10 de usuarios mas activos del grupo por puntos.'),
+        section('Como usar', '.ranking'),
+        section('Como funciona', 'Calcula puntos netos (reacciones positivas - negativas + actividad), ordena y muestra con emojis de medalla.'),
+        section('Plan minimo', 'basic'),
+        section('Tip', 'Usa .rangos para ver como sumar puntos y cuales son los rangos disponibles.')
+    ].join('\n\n'),
+    inactivos: [
+        section('Que hace', 'Lista usuarios inactivos del grupo por cantidad de dias sin actividad.'),
+        section('Como usar', '.inactivos <dias>'),
+        section('Como funciona', 'Compara la ultima actividad registrada de cada miembro contra el umbral indicado y lista a los que no participaron.'),
+        section('Plan minimo', 'basic'),
+        section('Ejemplo', '.inactivos 14')
+    ].join('\n\n'),
+    'expulsar-inactivos': [
+        section('Que hace', 'Expulsa automaticamente a usuarios inactivos por X dias.'),
+        section('Como usar', '.expulsar-inactivos <dias>'),
+        section('Como funciona', 'Obtiene lista de participantes, filtra inactivos segun umbral de dias y los expulsa con pausa entre cada uno.'),
+        section('Plan minimo', 'pro'),
+        section('Advertencia', 'Salta admins y el bot. Acepta confirmacion antes de proceder.'),
+        section('Ejemplo', '.expulsar-inactivos 30')
+    ].join('\n\n'),
+    backupnow: [
+        section('Que hace', 'Crea un backup manual de todos los datos del bot.'),
+        section('Como usar', '.backupnow'),
+        section('Como funciona', 'Ejecuta la funcion de backup que comprime datos y los guarda en storage/backups/ con timestamp.'),
+        section('Tip', 'Retorna la ruta relativa del archivo generado para verificacion.')
+    ].join('\n\n'),
+    reporte: [
+        section('Que hace', 'Envia un reporte de bug o problema al owner del bot.'),
+        section('Como usar', '.reporte <comando> <descripcion>'),
+        section('Como funciona', 'Genera un mensaje privado al owner con el contexto del chat, usuario, grupo y hora del reporte.'),
+        section('Plan minimo', 'basic'),
+        section('Ejemplo', '.reporte ban el comando no expulsa aunque el bot es admin')
+    ].join('\n\n'),
+    comentario: [
+        section('Que hace', 'Envia una sugerencia o comentario general al owner del bot.'),
+        section('Como usar', '.comentario <texto>'),
+        section('Como funciona', 'Construye mensaje con datos del usuario y grupo, lo envia al owner de forma privada y confirma el envio.'),
+        section('Plan minimo', 'basic'),
+        section('Ejemplo', '.comentario seria genial un comando de sorteos')
+    ].join('\n\n'),
+    setmenuimg: [
+        section('Que hace', 'Establece una imagen personalizada como cabecera del menu del grupo.'),
+        section('Como usar', 'Responde una imagen con .setmenuimg | .setmenuimg reset'),
+        section('Como funciona', 'Descarga y valida la imagen, la guarda en storage del grupo y el menu la usara como header.'),
+        section('Plan minimo', 'premium'),
+        section('Tip', 'Con reset elimina la imagen personalizada y vuelve al header por defecto.')
+    ].join('\n\n'),
+    setmenuname: [
+        section('Que hace', 'Establece un titulo personalizado para el menu del grupo.'),
+        section('Como usar', '.setmenuname <titulo> | .setmenuname reset'),
+        section('Como funciona', 'Guarda el texto (max 40 caracteres) en la base del grupo. El menu usara ese titulo en lugar del nombre global.'),
+        section('Plan minimo', 'premium'),
+        section('Ejemplo', '.setmenuname 🎮 Comandos Gamer')
+    ].join('\n\n'),
+
+    // ── COMANDOS OWNER ───────────────────────────────────────────────────────
+    setplan: [
+        section('Que hace', 'Asigna un plan (free/basic/pro/premium) a un grupo con duracion.'),
+        section('Como usar', '.setplan (en el grupo) | .setplan <chat_id> (en privado)'),
+        section('Como funciona', 'Inicia flujo de 2 pasos: primero elige plan, luego dias de duracion. 0 dias = sin vencimiento.'),
+        section('Solo owner', 'Si'),
+        section('Ejemplo', '.setplan pro -> 30')
+    ].join('\n\n'),
+    setadminplan: [
+        section('Que hace', 'Asigna un plan personalizado a un admin registrado.'),
+        section('Como usar', '.setadminplan <numero@c.us> <plan>'),
+        section('Como funciona', 'Verifica que sea admin registrado, valida el plan y lo guarda. "default" elimina el plan personalizado.'),
+        section('Solo owner', 'Si'),
+        section('Ejemplo', '.setadminplan 521234567890@c.us pro')
+    ].join('\n\n'),
+    setprefix: [
+        section('Que hace', 'Cambia el prefijo global de comandos del bot.'),
+        section('Como usar', '.setprefix <caracter>'),
+        section('Como funciona', 'Valida que no tenga espacios y sea de maximo 3 caracteres, luego actualiza db.config.prefix.'),
+        section('Solo owner', 'Si'),
+        section('Ejemplo', '.setprefix !')
+    ].join('\n\n'),
+    broadcast: [
+        section('Que hace', 'Envia un mensaje a todos los grupos donde esta el bot.'),
+        section('Como usar', '.broadcast <mensaje> | .broadcast [solo-plan:pro] <mensaje>'),
+        section('Como funciona', 'Itera sobre todos los grupos con pausa de 800ms entre envios. Soporta filtro de plan opcional.'),
+        section('Solo owner', 'Si'),
+        section('Ejemplo', '.broadcast Mantenimiento manana a las 10am')
+    ].join('\n\n'),
+    checkcmds: [
+        section('Que hace', 'Valida la integridad de todos los comandos cargados en el bot.'),
+        section('Como usar', '.checkcmds'),
+        section('Como funciona', 'Verifica que cada comando tenga nombre y funcion execute(), detecta duplicados y cuenta tipos (auto, hidden, ownerOnly).'),
+        section('Solo owner', 'Si'),
+        section('Tip', 'Usar despues de agregar nuevos comandos para confirmar que cargaron correctamente.')
+    ].join('\n\n'),
+    disablecmd: [
+        section('Que hace', 'Desactiva un comando renombrandolo a .disabled.js (sin eliminarlo).'),
+        section('Como usar', '.disablecmd <nombre>'),
+        section('Como funciona', 'Busca el archivo en modules/general, lo renombra a .disabled.js y recarga comandos.'),
+        section('Solo owner', 'Si'),
+        section('Tip', 'Para reactivarlo usa .enablecmd. Protege "menu" y "ayuda".')
+    ].join('\n\n'),
+    enablecmd: [
+        section('Que hace', 'Reactiva un comando desactivado previamente con .disablecmd.'),
+        section('Como usar', '.enablecmd <nombre>'),
+        section('Como funciona', 'Busca el archivo .disabled.js en modules/general, lo renombra a .js y recarga comandos.'),
+        section('Solo owner', 'Si'),
+        section('Ejemplo', '.enablecmd ping')
+    ].join('\n\n'),
+    listadmins: [
+        section('Que hace', 'Lista todos los admins registrados en el bot con sus planes actuales.'),
+        section('Como usar', '.listadmins'),
+        section('Como funciona', 'Lee db.admins y muestra cada numero con su plan personalizado o el plan por defecto.'),
+        section('Solo owner', 'Si'),
+        section('Tip', 'Usa .setadminplan para cambiar el plan de cualquier admin de la lista.')
+    ].join('\n\n'),
+    listmods: [
+        section('Que hace', 'Lista todos los moderadores registrados en el sistema.'),
+        section('Como usar', '.listmods'),
+        section('Como funciona', 'Lee db.moderators y muestra lista numerada de todos los numeros con rol de moderador.'),
+        section('Solo owner', 'Si')
+    ].join('\n\n'),
+    addmod: [
+        section('Que hace', 'Agrega un nuevo moderador al sistema del bot.'),
+        section('Como usar', '.addmod <numero@c.us> | menciona usuario'),
+        section('Como funciona', 'Valida el formato del numero, verifica que no sea duplicado y lo agrega a db.moderators.'),
+        section('Solo owner', 'Si'),
+        section('Ejemplo', '.addmod 521234567890@c.us')
+    ].join('\n\n'),
+    delmod: [
+        section('Que hace', 'Elimina un moderador del sistema del bot.'),
+        section('Como usar', '.delmod <numero@c.us> | menciona usuario'),
+        section('Como funciona', 'Busca el numero en db.moderators, verifica que exista y lo filtra del array.'),
+        section('Solo owner', 'Si'),
+        section('Ejemplo', '.delmod 521234567890@c.us')
+    ].join('\n\n'),
+    setowner: [
+        section('Que hace', 'Transfiere la propiedad del bot a otro usuario.'),
+        section('Como usar', '.setowner <numero@c.us> | menciona usuario | responde mensaje'),
+        section('Como funciona', 'Valida el nuevo owner, actualiza db.config.ownerNumber y genera registro de auditoria.'),
+        section('Solo owner', 'Si'),
+        section('Advertencia', 'Operacion irreversible sin acceso al archivo de datos directamente.')
+    ].join('\n\n'),
+    claimowner: [
+        section('Que hace', 'Reclama la propiedad del bot si aun no esta asignada.'),
+        section('Como usar', '.claimowner'),
+        section('Como funciona', 'Verifica si existe owner, si no asigna al remitente como owner. Solo funciona una vez.'),
+        section('Nota', 'Usar en privado. Solo disponible si el bot nunca tuvo owner configurado.')
+    ].join('\n\n'),
+    reload: [
+        section('Que hace', 'Recarga todos los comandos del bot sin reiniciarlo.'),
+        section('Como usar', '.reload'),
+        section('Como funciona', 'Ejecuta loadCommands() que rescannea la carpeta modules/ y carga archivos actualizados.'),
+        section('Solo owner', 'Si'),
+        section('Tip', 'Util despues de editar o agregar un archivo de comando desde el servidor.')
+    ].join('\n\n'),
+    statusbot: [
+        section('Que hace', 'Muestra estado del bot: uptime, memoria, chats activos y comandos cargados.'),
+        section('Como usar', '.statusbot'),
+        section('Como funciona', 'Obtiene process.uptime(), process.memoryUsage(), lista de chats y comandos. Formatea en reporte compacto.'),
+        section('Solo owner', 'Si'),
+        section('Tip', 'Memoria muestra RSS y Heap en MB. Uptime en dias/horas/minutos/segundos.')
+    ].join('\n\n'),
+    'cleanup-groups': [
+        section('Que hace', 'Limpia del almacenamiento las carpetas de grupos que ya no existen.'),
+        section('Como usar', '.cleanup-groups | .cleanup-groups apply'),
+        section('Como funciona', 'Sin "apply" solo simula y lista lo que borraria. Con "apply" realiza la limpieza efectiva.'),
+        section('Solo owner', 'Si'),
+        section('Tip', 'Siempre ejecuta sin "apply" primero para previsualizar.')
+    ].join('\n\n'),
+    bulksetplan: [
+        section('Que hace', 'Asigna el mismo plan a todos los grupos con admins registrados.'),
+        section('Como usar', '.bulksetplan <plan> <dias>'),
+        section('Como funciona', 'Obtiene lista de grupos, filtra los que tienen admin registrado y asigna plan+expiry a todos.'),
+        section('Solo owner', 'Si'),
+        section('Ejemplo', '.bulksetplan pro 30')
+    ].join('\n\n'),
+    setcmdplan: [
+        section('Que hace', 'Establece el plan minimo requerido para ejecutar un comando especifico.'),
+        section('Como usar', '.setcmdplan <comando> <plan> | .setcmdplan <comando> default'),
+        section('Como funciona', 'Valida que el comando exista, actualiza db.commandPlans[nombre]. "default" elimina la restriccion.'),
+        section('Solo owner', 'Si'),
+        section('Ejemplo', '.setcmdplan trivia premium')
+    ].join('\n\n'),
+    delcmd: [
+        section('Que hace', 'Elimina permanentemente un archivo de comando.'),
+        section('Como usar', '.delcmd <nombre>'),
+        section('Como funciona', 'Busca el archivo .js en modules/general, lo elimina con fs.rmSync y recarga comandos.'),
+        section('Solo owner', 'Si'),
+        section('Advertencia', 'Operacion destructiva, diferente a .disablecmd. No se puede deshacer.')
+    ].join('\n\n'),
+    menusection: [
+        section('Que hace', 'Crea, organiza y gestiona secciones personalizadas en el menu.'),
+        section('Como usar', '.menusection list | create <dominio> <Titulo> | delete <Titulo> | move <sec:cmd> <sec:cmd>'),
+        section('Como funciona', 'Gestiona db.menuSections con operaciones create/list/move/delete sobre secciones custom sin tocar las predefinidas.'),
+        section('Solo owner', 'Si'),
+        section('Dominios validos', 'user, admin, owner')
+    ].join('\n\n'),
+    movecmd: [
+        section('Que hace', 'Mueve un comando hacia arriba o abajo dentro de su seccion en el menu.'),
+        section('Como usar', '.movecmd <comando> 1 (subir) | .movecmd <comando> 0 (bajar)'),
+        section('Como funciona', 'Busca el comando en db.menuSections, valida la direccion e intercambia posiciones con el adjacente.'),
+        section('Solo owner', 'Si'),
+        section('Ejemplo', '.movecmd ping 1')
+    ].join('\n\n'),
+    setlogskey: [
+        section('Que hace', 'Configura la clave de seguridad requerida para borrar logs con .dellogs.'),
+        section('Como usar', '.setlogskey <clave>'),
+        section('Como funciona', 'Valida minimo 8 caracteres, actualiza db.config.logsKey. La clave se requiere en cada .dellogs.'),
+        section('Solo owner', 'Si. Solo en privado.'),
+        section('Tip', 'No muestra la clave en los logs de auditoria por seguridad.')
+    ].join('\n\n'),
+    verlogskey: [
+        section('Que hace', 'Muestra la clave actual configurada para borrar logs.'),
+        section('Como usar', '.verlogskey'),
+        section('Como funciona', 'Retorna db.config.logsKey al owner.'),
+        section('Solo owner', 'Si. Solo en privado.')
+    ].join('\n\n'),
+    setregisterkey: [
+        section('Que hace', 'Configura la clave necesaria para que admins se registren en el bot.'),
+        section('Como usar', '.setregisterkey <clave>'),
+        section('Como funciona', 'Valida minimo 8 caracteres, actualiza db.config.registerKey. Los admins la necesitan para el registro inicial.'),
+        section('Solo owner', 'Si. Solo en privado.')
+    ].join('\n\n'),
+    verregisterkey: [
+        section('Que hace', 'Muestra la clave actual para registro de admins.'),
+        section('Como usar', '.verregisterkey'),
+        section('Como funciona', 'Retorna db.config.registerKey al owner.'),
+        section('Solo owner', 'Si. Solo en privado.')
+    ].join('\n\n'),
+    logs: [
+        section('Que hace', 'Muestra resumen de grupos activos, planes y ultimos eventos del sistema.'),
+        section('Como usar', '.logs'),
+        section('Como funciona', 'Lista cada grupo con su plan y dias restantes, seguido de los ultimos 10 eventos registrados.'),
+        section('Solo owner', 'Si. Solo en privado.')
+    ].join('\n\n'),
+    dellogs: [
+        section('Que hace', 'Elimina un log especifico del registro del sistema (requiere clave).'),
+        section('Como usar', '.dellogs <numero> <clave>'),
+        section('Como funciona', 'Valida la clave contra db.config.logsKey, verifica que el log exista y lo borra definitivamente.'),
+        section('Solo owner', 'Si. Solo en privado.'),
+        section('Ejemplo', '.dellogs 5 MiClave123')
+    ].join('\n\n'),
+    menulogs: [
+        section('Que hace', 'Muestra menu de comandos privados disponibles para el owner.'),
+        section('Como usar', '.menulogs'),
+        section('Como funciona', 'Retorna lista de comandos privados disponibles con referencias a .ayudalogs para mas detalle.'),
+        section('Solo owner', 'Si. Solo en privado.')
+    ].join('\n\n'),
+    ayudalogs: [
+        section('Que hace', 'Muestra ayuda detallada de los comandos privados del owner.'),
+        section('Como usar', '.ayudalogs'),
+        section('Como funciona', 'Retorna sintaxis y ejemplos de: .logs, .dellogs, .verlogskey, .setlogskey, .verregisterkey, .setregisterkey.'),
+        section('Solo owner', 'Si. Solo en privado.')
     ].join('\n\n')
 };
 
