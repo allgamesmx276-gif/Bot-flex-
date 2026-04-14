@@ -245,10 +245,10 @@ const HELP_BY_COMMAND = {
     cofre: [
         section('Que hace', 'Programa cofres automáticos con tiempo aleatorio y premio por cofre.'),
         section('Como usar', 'Privado: *.cofre activar*\nGrupo: *.cofre estado* | *.cofre detener*'),
-        section('Como funciona', 'El bot pregunta grupo, cantidad de cofres, tiempo mínimo/máximo, palabra clave y premios. Cada cofre se envía en intervalo aleatorio.'),
+        section('Como funciona', 'El bot pregunta grupo, cantidad de cofres, tiempo mínimo/máximo (min u horas), palabra clave y premios en texto. Cada cofre se envía en intervalo aleatorio.'),
         section('Cómo ganar', 'Cuando salga un cofre, gana el primero que escriba: *cofre <palabra>*.'),
-        section('Premios', 'Puedes usar premio único para todos o premios por orden: cofre #1= premio 1, cofre #2= premio 2, etc.'),
-        section('Ejemplo', 'Privado: .cofre activar → seleccionar grupo → 5 cofres → 5-15 min → palabra oro → varios premios')
+        section('Premios', 'Puedes usar premio único para todos o premios por orden: cofre #1= premio 1, cofre #2= premio 2, etc. (texto libre, por ejemplo Nitro, VIP, 50 puntos).'),
+        section('Ejemplo', 'Privado: .cofre activar → seleccionar grupo → 5 cofres → 10 minutos y 3 horas → palabra oro → varios premios')
     ].join('\n\n'),
     bot: [
         section('Que hace', 'Pausa o activa respuestas del bot solo en este grupo.'),

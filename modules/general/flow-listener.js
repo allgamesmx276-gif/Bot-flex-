@@ -247,6 +247,43 @@ module.exports = {
                 return Math.floor(Math.random() * (max - min + 1)) + min;
             };
 
+            const parseDurationToMinutes = input => {
+                const raw = String(input || '').trim().toLowerCase();
+                if (!raw) return NaN;
+
+                const compact = raw
+                    .replace(/\s+/g, '')
+                    .replace(/minutos?|mins?/g, 'm')
+                    .replace(/horas?|hrs?/g, 'h');
+
+                const match = compact.match(/^(\d+)([mh])?$/);
+                if (!match) return NaN;
+
+                const value = parseInt(match[1], 10);
+                const unit = match[2] || 'm';
+                return unit === 'h' ? value * 60 : value;
+            };
+
+            const formatMinutes = minutes => {
+                const n = Math.max(1, Number(minutes) || 1);
+                if (n % 60 === 0) {
+                    const h = n / 60;
+                    return `${h} ${h === 1 ? 'hora' : 'horas'}`;
+                }
+                return `${n} ${n === 1 ? 'minuto' : 'minutos'}`;
+            };
+
+            const normalizePrizeLabel = input => {
+                const raw = String(input || '').trim();
+                if (!raw) return '';
+
+                if (/^\d+$/.test(raw)) {
+                    return `${raw} puntos`;
+                }
+
+                return raw;
+            };
+
             const finishCampaign = () => {
                 if (!db.cofreGames || typeof db.cofreGames !== 'object') {
                     db.cofreGames = {};
@@ -280,8 +317,8 @@ module.exports = {
                     `✅ Campaña de cofres programada en *${state.chatName}*\n\n` +
                     `• Cofres: ${state.totalDrops}\n` +
                     `• Palabra: ${state.keyword}\n` +
-                    `• Intervalo aleatorio: ${state.minMinutes}-${state.maxMinutes} min\n` +
-                    `• Primer cofre en aprox: ${firstDelay} min`
+                    `• Intervalo aleatorio: ${formatMinutes(state.minMinutes)} a ${formatMinutes(state.maxMinutes)}\n` +
+                    `• Primer cofre en aprox: ${formatMinutes(firstDelay)}`
                 );
             };
 
@@ -316,28 +353,28 @@ module.exports = {
                 state.step = 'cofre_min_tiempo';
                 saveDB();
                 msg._flexHandled = true;
-                return msg.reply('2/6 Tiempo mínimo entre cofres (en minutos). Ejemplo: 5');
+                return msg.reply('2/6 Tiempo mínimo entre cofres. Ejemplo: 10 minutos o 1h');
             }
 
             if (state.step === 'cofre_min_tiempo') {
-                const n = parseInt(text, 10);
+                const n = parseDurationToMinutes(body);
                 if (isNaN(n) || n < 1 || n > 1440) {
                     msg._flexHandled = true;
-                    return msg.reply('Tiempo mínimo inválido. Rango: 1 a 1440 min.');
+                    return msg.reply('Tiempo mínimo inválido. Usa minutos u horas (ej: 10 minutos, 30m, 3 horas). Rango: 1 min a 24h.');
                 }
 
                 state.minMinutes = n;
                 state.step = 'cofre_max_tiempo';
                 saveDB();
                 msg._flexHandled = true;
-                return msg.reply(`3/6 Tiempo máximo entre cofres (>= ${n}). Ejemplo: ${n + 5}`);
+                return msg.reply(`3/6 Tiempo máximo entre cofres (>= ${formatMinutes(n)}). Ejemplo: 3 horas`);
             }
 
             if (state.step === 'cofre_max_tiempo') {
-                const n = parseInt(text, 10);
+                const n = parseDurationToMinutes(body);
                 if (isNaN(n) || n < state.minMinutes || n > 10080) {
                     msg._flexHandled = true;
-                    return msg.reply(`Tiempo máximo inválido. Debe ser entre ${state.minMinutes} y 10080 min.`);
+                    return msg.reply(`Tiempo máximo inválido. Debe ser mayor o igual a ${formatMinutes(state.minMinutes)} y hasta 7 días.`);
                 }
 
                 state.maxMinutes = n;
@@ -369,7 +406,7 @@ module.exports = {
                     state.step = 'cofre_premio_unico';
                     saveDB();
                     msg._flexHandled = true;
-                    return msg.reply('6/6 Escribe el premio único en puntos. Ejemplo: 50');
+                    return msg.reply('6/6 Escribe el premio único (texto). Ejemplo: Nitro, VIP 1 día, 50 puntos');
                 }
 
                 if (text === 'varios') {
@@ -378,7 +415,7 @@ module.exports = {
                     state.step = 'cofre_premio_item';
                     saveDB();
                     msg._flexHandled = true;
-                    return msg.reply(`6/6 Premio del cofre #1 en puntos (de ${state.totalDrops}).`);
+                    return msg.reply(`6/6 Premio del cofre #1 (texto) de ${state.totalDrops}.`);
                 }
 
                 msg._flexHandled = true;
@@ -386,25 +423,25 @@ module.exports = {
             }
 
             if (state.step === 'cofre_premio_unico') {
-                const n = parseInt(text, 10);
-                if (isNaN(n) || n < 1) {
+                const label = normalizePrizeLabel(body);
+                if (!label) {
                     msg._flexHandled = true;
-                    return msg.reply('Premio inválido. Debe ser mayor a 0.');
+                    return msg.reply('Premio inválido. Escribe una palabra o frase corta.');
                 }
 
-                state.prizes = new Array(state.totalDrops).fill(n);
+                state.prizes = new Array(state.totalDrops).fill(label);
                 msg._flexHandled = true;
                 return finishCampaign();
             }
 
             if (state.step === 'cofre_premio_item') {
-                const n = parseInt(text, 10);
-                if (isNaN(n) || n < 1) {
+                const label = normalizePrizeLabel(body);
+                if (!label) {
                     msg._flexHandled = true;
-                    return msg.reply('Premio inválido. Debe ser mayor a 0.');
+                    return msg.reply('Premio inválido. Escribe una palabra o frase corta.');
                 }
 
-                state.prizes.push(n);
+                state.prizes.push(label);
                 state.prizeIndex += 1;
 
                 if (state.prizeIndex >= state.totalDrops) {
@@ -414,7 +451,7 @@ module.exports = {
 
                 saveDB();
                 msg._flexHandled = true;
-                return msg.reply(`Premio del cofre #${state.prizeIndex + 1} en puntos (de ${state.totalDrops}).`);
+                return msg.reply(`Premio del cofre #${state.prizeIndex + 1} (texto) de ${state.totalDrops}.`);
             }
         }
 

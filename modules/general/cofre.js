@@ -5,6 +5,15 @@ function normalizeId(id) {
     return String(id || '').replace(/@.*/, '');
 }
 
+function formatMinutes(minutes) {
+    const n = Math.max(1, Number(minutes) || 1);
+    if (n % 60 === 0) {
+        const h = n / 60;
+        return `${h} ${h === 1 ? 'hora' : 'horas'}`;
+    }
+    return `${n} ${n === 1 ? 'minuto' : 'minutos'}`;
+}
+
 async function getManageableGroups(client, sender, db) {
     const owner = db.config.ownerNumber && normalizeId(sender) === normalizeId(db.config.ownerNumber);
     const isRegisteredAdmin = Array.isArray(db.admins) && db.admins.includes(sender);
@@ -122,11 +131,11 @@ module.exports = {
                 `🎁 *COFRE PROGRAMADO*\n\n` +
                 `Grupo: ${campaign.chatName || chat.name}\n` +
                 `Palabra: *${campaign.config.keyword}*\n` +
-                `Tiempo aleatorio: *${campaign.config.minMinutes}-${campaign.config.maxMinutes} min*\n` +
+                `Tiempo aleatorio: *${formatMinutes(campaign.config.minMinutes)} a ${formatMinutes(campaign.config.maxMinutes)}*\n` +
                 `Enviados: *${campaign.progress.sent}/${campaign.config.totalDrops}*\n` +
                 `Ganados: *${campaign.progress.claimed}*\n` +
-                `Próximo en: *${nextMin} min*\n` +
-                (active ? `\nCofre activo: #${active.index} (premio +${active.prize})` : '\nSin cofre activo en este momento.')
+                `Próximo en: *${formatMinutes(nextMin)}*\n` +
+                (active ? `\nCofre activo: #${active.index} (premio ${active.prizeLabel || active.prize || 'sorpresa'})` : '\nSin cofre activo en este momento.')
             );
         }
 

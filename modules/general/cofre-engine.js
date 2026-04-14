@@ -28,6 +28,26 @@ function randomBetweenMinutes(minMinutes, maxMinutes) {
     return value;
 }
 
+function getPrizeLabel(rawPrize) {
+    const value = String(rawPrize || '').trim();
+    if (!value) return 'Premio sorpresa';
+    if (/^\d+$/.test(value)) return `${value} puntos`;
+    return value;
+}
+
+function extractPointsFromPrizeLabel(label) {
+    const text = String(label || '').trim().toLowerCase();
+    if (!text) return 0;
+
+    if (/^\d+$/.test(text)) {
+        return parseInt(text, 10) || 0;
+    }
+
+    const match = text.match(/(\d+)\s*(puntos?|pts?)/i);
+    if (!match) return 0;
+    return parseInt(match[1], 10) || 0;
+}
+
 module.exports = {
     name: 'cofre-engine',
     category: 'system',
@@ -66,9 +86,9 @@ module.exports = {
 
             if (canSendNext && hasRemaining) {
                 const dropNumber = campaign.progress.sent + 1;
-                const prize = Array.isArray(campaign.prizes) && campaign.prizes.length
-                    ? Number(campaign.prizes[dropNumber - 1] || campaign.prizes[0] || 1)
-                    : 1;
+                const prizeLabel = Array.isArray(campaign.prizes) && campaign.prizes.length
+                    ? getPrizeLabel(campaign.prizes[dropNumber - 1] || campaign.prizes[0] || 'Premio sorpresa')
+                    : 'Premio sorpresa';
 
                 const moreAfterThis = dropNumber < total;
                 const nextDelayMinutes = moreAfterThis
@@ -81,7 +101,7 @@ module.exports = {
 
                 campaign.activeDrop = {
                     index: dropNumber,
-                    prize,
+                    prizeLabel,
                     keyword: campaign.config.keyword,
                     sentAt: now,
                     expiresAt
@@ -93,7 +113,7 @@ module.exports = {
                 await client.sendMessage(
                     chatId,
                     `🎁 *COFRE #${dropNumber}*\n\n` +
-                    `Premio: *+${prize} puntos*\n` +
+                    `Premio: *${prizeLabel}*\n` +
                     `Para ganar, escribe exactamente:\n` +
                     `*cofre ${campaign.config.keyword}*\n\n` +
                     `🏁 Gana el primero en escribirlo.`
@@ -120,11 +140,14 @@ module.exports = {
             const expected = `cofre ${String(campaign.activeDrop.keyword || '').trim().toLowerCase()}`;
             if (body === expected) {
                 const winner = msg.author || msg.from;
-                const prize = Number(campaign.activeDrop.prize || 1);
+                const prizeLabel = getPrizeLabel(campaign.activeDrop.prizeLabel || campaign.activeDrop.prize);
+                const points = extractPointsFromPrizeLabel(prizeLabel);
 
-                if (!db.userReactions[chatId]) db.userReactions[chatId] = {};
-                if (!db.userReactions[chatId][winner]) db.userReactions[chatId][winner] = { pos: 0, neg: 0 };
-                db.userReactions[chatId][winner].pos += prize;
+                if (points > 0) {
+                    if (!db.userReactions[chatId]) db.userReactions[chatId] = {};
+                    if (!db.userReactions[chatId][winner]) db.userReactions[chatId][winner] = { pos: 0, neg: 0 };
+                    db.userReactions[chatId][winner].pos += points;
+                }
 
                 campaign.progress.claimed = Number(campaign.progress.claimed || 0) + 1;
                 const cofreNum = campaign.activeDrop.index;
@@ -134,7 +157,8 @@ module.exports = {
                 await msg.reply(
                     `🏆🎉 *¡Felicidades @${winner.split('@')[0]}!*\n` +
                     `Ganaste el *cofre #${cofreNum}*\n` +
-                    `Premio: *+${prize} puntos*`,
+                    `Premio: *${prizeLabel}*` +
+                    (points > 0 ? `\nPuntos sumados: *+${points}*` : ''),
                     undefined,
                     { mentions: [winner] }
                 ).catch(() => {});
@@ -149,7 +173,8 @@ module.exports = {
                         `Grupo: ${campaign.chatName || chatId}\n` +
                         `Cofre: #${cofreNum}\n` +
                         `Ganador: @${winner.split('@')[0]}\n` +
-                        `Premio: +${prize} puntos`,
+                        `Premio: ${prizeLabel}` +
+                        (points > 0 ? `\nPuntos otorgados: +${points}` : ''),
                         { mentions: [winner] }
                     ).catch(() => false);
                 }
