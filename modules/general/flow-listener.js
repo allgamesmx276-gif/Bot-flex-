@@ -66,7 +66,7 @@ module.exports = {
 
         // Modo offline sin prefijo: solo admins/owner.
         if (text === 'offline' || text === 'online') {
-            if (!hasRegisteredAdminAccess(msg) && !await isAdmin(client, msg)) {
+            if (!await isAdmin(client, msg)) {
                 msg._flexHandled = true;
                 return replyText('Solo admins pueden usar offline/online.');
             }
