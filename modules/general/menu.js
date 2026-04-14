@@ -78,8 +78,9 @@ module.exports = {
         bodyLines.push('');
         headerLines.push(`💼 PLAN: ${plan.toUpperCase()}`);
 
+        const disabledSections = (groupDb && Array.isArray(groupDb.disabledMenuSections)) ? groupDb.disabledMenuSections : [];
         if (canUseAdminMenu) {
-            if (isPlanAllowed(plan, 'basic')) {
+            if (isPlanAllowed(plan, 'basic') && !disabledSections.includes('status')) {
                 addBoxSection('🛡️ STATUS', [
                     `${stateText(groupDb && groupDb.welcome)} welcome`,
                     `${stateText(groupDb && groupDb.goodbye)} goodbye`,
@@ -91,22 +92,27 @@ module.exports = {
                 ]);
             }
 
-            addBoxSection(
-                '🛡️ ADMIN MSG',
-                filterLabelsByPlan(getOrderedMenuLabels(db, 'adminMsg'), 'admin').map(cmd)
-            );
-
-            addBoxSection(
-                '🛡️ ADMIN MOD',
-                filterLabelsByPlan(getOrderedMenuLabels(db, 'adminMod'), 'admin').map(cmd)
-            );
-
-            addBoxSection(
-                '🛡️ ADMIN CTRL',
-                filterLabelsByPlan(getOrderedMenuLabels(db, 'adminCtrl'), 'admin').map(cmd)
-            );
+            if (!disabledSections.includes('adminmsg')) {
+                addBoxSection(
+                    '🛡️ ADMIN MSG',
+                    filterLabelsByPlan(getOrderedMenuLabels(db, 'adminMsg'), 'admin').map(cmd)
+                );
+            }
+            if (!disabledSections.includes('adminmod')) {
+                addBoxSection(
+                    '🛡️ ADMIN MOD',
+                    filterLabelsByPlan(getOrderedMenuLabels(db, 'adminMod'), 'admin').map(cmd)
+                );
+            }
+            if (!disabledSections.includes('adminctrl')) {
+                addBoxSection(
+                    '🛡️ ADMIN CTRL',
+                    filterLabelsByPlan(getOrderedMenuLabels(db, 'adminCtrl'), 'admin').map(cmd)
+                );
+            }
 
             const customAdminSections = getCustomSections(db, 'admin')
+                .filter(section => !disabledSections.includes(section.key))
                 .map(section => ({
                     title: `🛡️ ${section.title.toUpperCase()}`,
                     commands: filterLabelsByPlan(section.commands, 'admin').map(cmd)
@@ -118,17 +124,21 @@ module.exports = {
 
         const utilEntries = getOrderedUtilityEntries(db);
 
-        addBoxSection(
-            '🎉 DIVERSION',
-            filterLabelsByPlan(getOrderedMenuLabels(db, 'diversion'), 'general').map(cmd)
-        );
+        if (!disabledSections.includes('diversion')) {
+            addBoxSection(
+                '🎉 DIVERSION',
+                filterLabelsByPlan(getOrderedMenuLabels(db, 'diversion'), 'general').map(cmd)
+            );
+        }
 
         const utilCommands = utilEntries
             .filter(([, fileBase]) => hasGeneralCommand(fileBase))
             .filter(([, fileBase]) => isCommandEnabledByPlan(fileBase, 'general'))
             .map(([label]) => cmd(label));
 
-        addBoxSection('🌐 UTILIDADES', utilCommands);
+        if (!disabledSections.includes('utilities')) {
+            addBoxSection('🌐 UTILIDADES', utilCommands);
+        }
 
         const userLabelToFileBase = new Map(utilEntries.map(([label, fileBase]) => [label, fileBase]));
         const customUserSections = getCustomSections(db, 'user')
@@ -145,9 +155,9 @@ module.exports = {
             })
             .filter(section => section.commands.length > 0);
 
-        customUserSections.forEach(section => addBoxSection(section.title, section.commands));
+        customUserSections.filter(section => !disabledSections.includes(section.key)).forEach(section => addBoxSection(section.title, section.commands));
 
-        if (owner) {
+        if (owner && !disabledSections.includes('ownersys')) {
             addBoxSection(
                 '👑 OWNER SYS',
                 filterLabelsByPlan(getOrderedMenuLabels(db, 'ownerSys'), 'owner').map(cmd)

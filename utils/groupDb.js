@@ -20,7 +20,8 @@ const DEFAULT_GROUP_DB = {
     antiLinkEnabled: false,
     antiDeleteEnabled: false,
     bannedWords: [...DEFAULT_BANNED_WORDS],
-    bannedWordsEnabled: false
+    bannedWordsEnabled: false,
+    disabledMenuSections: []
 };
 
 const FEATURE_FILES = {
@@ -70,7 +71,8 @@ function normalizeGroupDB(data = {}) {
         antiLinkEnabled: Boolean(data.antiLinkEnabled),
         antiDeleteEnabled: Boolean(data.antiDeleteEnabled),
         bannedWords: Array.isArray(data.bannedWords) ? data.bannedWords : [],
-        bannedWordsEnabled: Boolean(data.bannedWordsEnabled)
+        bannedWordsEnabled: Boolean(data.bannedWordsEnabled),
+        disabledMenuSections: Array.isArray(data.disabledMenuSections) ? data.disabledMenuSections : []
     };
 }
 
