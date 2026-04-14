@@ -227,7 +227,7 @@ module.exports = {
             return;
         }
 
-        // ── COFRE: flujo desde privado (no requiere chatId === targetGroup) ──────
+        // ── COFRE: flujo desde privado para campaña aleatoria ───────────────────
         if (isPrivate && db.awaiting[sender] && !body.startsWith('.') &&
             typeof db.awaiting[sender].step === 'string' &&
             db.awaiting[sender].step.startsWith('cofre_')) {
@@ -241,129 +241,180 @@ module.exports = {
                 return msg.reply('❌ Cancelado');
             }
 
-            const MODO_DESC_FL = {
-                primero: 'El primero que lo intenta gana (sin RNG)',
-                suerte: 'Cada intento tiene prob% de ganar — 1 ganador',
-                todos: 'Cada intento tiene prob% de ganar — multiples ganadores'
+            const randomDelayMinutes = () => {
+                const min = Math.max(1, Number(state.minMinutes) || 1);
+                const max = Math.max(min, Number(state.maxMinutes) || min);
+                return Math.floor(Math.random() * (max - min + 1)) + min;
             };
 
-            function launchCofre(targetChatId, targetChatName) {
-                if (!db.cofreGames) db.cofreGames = {};
-                if (!db.cofreGames[targetChatId]) db.cofreGames[targetChatId] = {};
-                const game = db.cofreGames[targetChatId];
-                game.active = true;
-                game.modo = state.modo || 'suerte';
-                game.prob = state.prob || 30;
-                game.premio = state.premio || 50;
-                game.tiempo = state.tiempo || 10;
-                game.openedAt = Date.now();
-                game.expiresAt = Date.now() + game.tiempo * 60 * 1000;
-                game.intentos = [];
-                game.ganadores = [];
+            const finishCampaign = () => {
+                if (!db.cofreGames || typeof db.cofreGames !== 'object') {
+                    db.cofreGames = {};
+                }
+
+                const firstDelay = randomDelayMinutes();
+                db.cofreGames[state.chatId] = {
+                    enabled: true,
+                    chatName: state.chatName,
+                    owner: sender,
+                    config: {
+                        keyword: state.keyword,
+                        totalDrops: state.totalDrops,
+                        minMinutes: state.minMinutes,
+                        maxMinutes: state.maxMinutes
+                    },
+                    prizes: state.prizes,
+                    progress: {
+                        sent: 0,
+                        claimed: 0
+                    },
+                    nextAt: Date.now() + firstDelay * 60 * 1000,
+                    activeDrop: null,
+                    createdAt: Date.now()
+                };
+
                 delete db.awaiting[sender];
                 saveDB();
 
-                // Notificar en el grupo
-                client.sendMessage(targetChatId,
-                    `🎁✨ *¡COFRE DISPONIBLE!* ✨🎁\n\n` +
-                    `🎯 Modo: *${game.modo}* — ${MODO_DESC_FL[game.modo]}\n` +
-                    `🎲 Probabilidad: *${game.prob}%*\n` +
-                    `🏆 Premio: *+${game.premio} puntos*\n` +
-                    `⏱️ Tiempo: *${game.tiempo} min*\n\n` +
-                    `¡Usa *.cofre abrir* para intentarlo!`
-                ).catch(() => {});
-
                 return msg.reply(
-                    `✅ *Cofre lanzado en ${targetChatName}*\n\n` +
-                    `• Modo: ${game.modo}\n` +
-                    `• Prob: ${game.prob}%\n` +
-                    `• Premio: +${game.premio} pts\n` +
-                    `• Tiempo: ${game.tiempo} min`
+                    `✅ Campaña de cofres programada en *${state.chatName}*\n\n` +
+                    `• Cofres: ${state.totalDrops}\n` +
+                    `• Palabra: ${state.keyword}\n` +
+                    `• Intervalo aleatorio: ${state.minMinutes}-${state.maxMinutes} min\n` +
+                    `• Primer cofre en aprox: ${firstDelay} min`
                 );
-            }
+            };
 
-            // Paso 1: elegir grupo de la lista
             if (state.step === 'cofre_elegir_grupo') {
                 const n = parseInt(text, 10);
                 if (isNaN(n) || n < 1 || n > state.grupos.length) {
                     msg._flexHandled = true;
-                    return msg.reply(`Elige un número entre 1 y ${state.grupos.length} o escribe "cancelar".`);
+                    return msg.reply(`Elige un número entre 1 y ${state.grupos.length}.`);
                 }
+
                 const grupo = state.grupos[n - 1];
                 state.chatId = grupo.id;
                 state.chatName = grupo.name;
-                state.step = 'cofre_modo';
+                state.step = 'cofre_cantidad';
                 saveDB();
                 msg._flexHandled = true;
                 return msg.reply(
-                    `📍 Grupo: *${grupo.name}*\n\n` +
-                    `1/3 — ¿Qué modo quieres?\n\n` +
-                    `• *primero* — ${MODO_DESC_FL.primero}\n` +
-                    `• *suerte* — ${MODO_DESC_FL.suerte}\n` +
-                    `• *todos* — ${MODO_DESC_FL.todos}`
+                    `🎁 Grupo: *${grupo.name}*\n\n` +
+                    '1/6 ¿Cuántos cofres quieres programar?\n' +
+                    'Ejemplo: 5'
                 );
             }
 
-            // Paso 2: modo
-            if (state.step === 'cofre_modo') {
-                if (!['primero', 'suerte', 'todos'].includes(text)) {
-                    msg._flexHandled = true;
-                    return msg.reply('Escribe: *primero*, *suerte* o *todos*');
-                }
-                state.modo = text;
-                if (text === 'primero') {
-                    // Sin probabilidad para modo primero
-                    state.step = 'cofre_premio';
-                    saveDB();
-                    msg._flexHandled = true;
-                    return msg.reply('2/3 — ¿Cuántos puntos se llevan como premio?\nEjemplo: 50');
-                } else {
-                    state.step = 'cofre_prob';
-                    saveDB();
-                    msg._flexHandled = true;
-                    return msg.reply('2/4 — ¿Qué % de probabilidad de ganar por intento? (1-100)\nEjemplo: 30');
-                }
-            }
-
-            // Paso 3a: probabilidad (solo suerte/todos)
-            if (state.step === 'cofre_prob') {
+            if (state.step === 'cofre_cantidad') {
                 const n = parseInt(text, 10);
                 if (isNaN(n) || n < 1 || n > 100) {
                     msg._flexHandled = true;
-                    return msg.reply('Ingresa un número entre 1 y 100.');
+                    return msg.reply('Cantidad inválida. Debe ser entre 1 y 100.');
                 }
-                state.prob = n;
-                state.step = 'cofre_premio';
+
+                state.totalDrops = n;
+                state.step = 'cofre_min_tiempo';
                 saveDB();
                 msg._flexHandled = true;
-                return msg.reply('3/4 — ¿Cuántos puntos de premio?\nEjemplo: 50');
+                return msg.reply('2/6 Tiempo mínimo entre cofres (en minutos). Ejemplo: 5');
             }
 
-            // Paso 3b / 4a: premio
-            if (state.step === 'cofre_premio') {
-                const n = parseInt(text, 10);
-                if (isNaN(n) || n < 1) {
-                    msg._flexHandled = true;
-                    return msg.reply('El premio debe ser mayor a 0.');
-                }
-                state.premio = n;
-                state.step = 'cofre_tiempo';
-                const paso = state.modo === 'primero' ? '3/3' : '4/4';
-                saveDB();
-                msg._flexHandled = true;
-                return msg.reply(`${paso} — ¿Cuántos minutos estará disponible el cofre? (1-1440)\nEjemplo: 10`);
-            }
-
-            // Último paso: tiempo → lanzar
-            if (state.step === 'cofre_tiempo') {
+            if (state.step === 'cofre_min_tiempo') {
                 const n = parseInt(text, 10);
                 if (isNaN(n) || n < 1 || n > 1440) {
                     msg._flexHandled = true;
-                    return msg.reply('El tiempo debe ser entre 1 y 1440 minutos.');
+                    return msg.reply('Tiempo mínimo inválido. Rango: 1 a 1440 min.');
                 }
-                state.tiempo = n;
+
+                state.minMinutes = n;
+                state.step = 'cofre_max_tiempo';
+                saveDB();
                 msg._flexHandled = true;
-                return launchCofre(state.chatId, state.chatName || state.chatId);
+                return msg.reply(`3/6 Tiempo máximo entre cofres (>= ${n}). Ejemplo: ${n + 5}`);
+            }
+
+            if (state.step === 'cofre_max_tiempo') {
+                const n = parseInt(text, 10);
+                if (isNaN(n) || n < state.minMinutes || n > 10080) {
+                    msg._flexHandled = true;
+                    return msg.reply(`Tiempo máximo inválido. Debe ser entre ${state.minMinutes} y 10080 min.`);
+                }
+
+                state.maxMinutes = n;
+                state.step = 'cofre_keyword';
+                saveDB();
+                msg._flexHandled = true;
+                return msg.reply('4/6 Escribe la palabra clave del cofre (ej: oro).\nSe usará así: *cofre oro*');
+            }
+
+            if (state.step === 'cofre_keyword') {
+                const keyword = String(text || '').trim().toLowerCase();
+                if (!/^[a-z0-9_-]{2,20}$/.test(keyword)) {
+                    msg._flexHandled = true;
+                    return msg.reply('Palabra inválida. Usa 2-20 caracteres: letras, números, guion o guion bajo.');
+                }
+
+                state.keyword = keyword;
+                state.step = 'cofre_premio_modo';
+                saveDB();
+                msg._flexHandled = true;
+                return msg.reply(
+                    '5/6 ¿Premio único o varios premios?\n' +
+                    'Responde: *1* (mismo premio para todos) o *varios* (uno por cofre).'
+                );
+            }
+
+            if (state.step === 'cofre_premio_modo') {
+                if (text === '1') {
+                    state.step = 'cofre_premio_unico';
+                    saveDB();
+                    msg._flexHandled = true;
+                    return msg.reply('6/6 Escribe el premio único en puntos. Ejemplo: 50');
+                }
+
+                if (text === 'varios') {
+                    state.prizeIndex = 0;
+                    state.prizes = [];
+                    state.step = 'cofre_premio_item';
+                    saveDB();
+                    msg._flexHandled = true;
+                    return msg.reply(`6/6 Premio del cofre #1 en puntos (de ${state.totalDrops}).`);
+                }
+
+                msg._flexHandled = true;
+                return msg.reply('Responde *1* o *varios*.');
+            }
+
+            if (state.step === 'cofre_premio_unico') {
+                const n = parseInt(text, 10);
+                if (isNaN(n) || n < 1) {
+                    msg._flexHandled = true;
+                    return msg.reply('Premio inválido. Debe ser mayor a 0.');
+                }
+
+                state.prizes = new Array(state.totalDrops).fill(n);
+                msg._flexHandled = true;
+                return finishCampaign();
+            }
+
+            if (state.step === 'cofre_premio_item') {
+                const n = parseInt(text, 10);
+                if (isNaN(n) || n < 1) {
+                    msg._flexHandled = true;
+                    return msg.reply('Premio inválido. Debe ser mayor a 0.');
+                }
+
+                state.prizes.push(n);
+                state.prizeIndex += 1;
+
+                if (state.prizeIndex >= state.totalDrops) {
+                    msg._flexHandled = true;
+                    return finishCampaign();
+                }
+
+                saveDB();
+                msg._flexHandled = true;
+                return msg.reply(`Premio del cofre #${state.prizeIndex + 1} en puntos (de ${state.totalDrops}).`);
             }
         }
 

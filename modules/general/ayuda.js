@@ -243,12 +243,12 @@ const HELP_BY_COMMAND = {
     ].join('\n\n'),
 
     cofre: [
-        section('Que hace', 'Lanza un cofre con puntos de premio que los miembros intentan abrir.'),
-        section('Como usar', '*.cofre* — ver estado | *.cofre abrir* — intentar | *.cofre activar* — (admin) lanzar | *.cofre cerrar* — (admin) cerrar | *.cofre config* — (admin) ajustar'),
-        section('Como funciona', 'El admin configura modo, probabilidad, premio y tiempo. Los miembros usan .cofre abrir para intentar ganarlo.'),
-        section('Modos', '*primero* — el 1er usuario gana directo\n*suerte* — % de prob por intento, 1 ganador\n*todos* — % de prob, varios ganadores posibles'),
-        section('Desde privado', 'Envía *.cofre activar* al bot desde privado — detecta tus grupos y lanza un flujo guiado con preguntas paso a paso.'),
-        section('Ejemplo', '.cofre config modo suerte → .cofre config prob 25 → .cofre activar')
+        section('Que hace', 'Programa cofres automáticos con tiempo aleatorio y premio por cofre.'),
+        section('Como usar', 'Privado: *.cofre activar*\nGrupo: *.cofre estado* | *.cofre detener*'),
+        section('Como funciona', 'El bot pregunta grupo, cantidad de cofres, tiempo mínimo/máximo, palabra clave y premios. Cada cofre se envía en intervalo aleatorio.'),
+        section('Cómo ganar', 'Cuando salga un cofre, gana el primero que escriba: *cofre <palabra>*.'),
+        section('Premios', 'Puedes usar premio único para todos o premios por orden: cofre #1= premio 1, cofre #2= premio 2, etc.'),
+        section('Ejemplo', 'Privado: .cofre activar → seleccionar grupo → 5 cofres → 5-15 min → palabra oro → varios premios')
     ].join('\n\n'),
     bot: [
         section('Que hace', 'Pausa o activa respuestas del bot solo en este grupo.'),
