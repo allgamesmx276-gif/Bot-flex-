@@ -313,6 +313,15 @@ module.exports = {
                 delete db.awaiting[sender];
                 saveDB();
 
+                client.sendMessage(
+                    state.chatId,
+                    `📢 *Se creó una campaña de cofres*\n\n` +
+                    `• Cofres programados: *${state.totalDrops}*\n` +
+                    `• Aparición: *aleatoria* entre ${formatMinutes(state.minMinutes)} y ${formatMinutes(state.maxMinutes)}\n` +
+                    `• Palabra para reclamar: *cofre ${state.keyword}*\n\n` +
+                    `Cuando veas un cofre, escribe esa frase exacta para intentar ganarlo.`
+                ).catch(() => {});
+
                 return msg.reply(
                     `✅ Campaña de cofres programada en *${state.chatName}*\n\n` +
                     `• Cofres: ${state.totalDrops}\n` +
