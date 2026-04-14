@@ -9,7 +9,9 @@ module.exports = {
     async execute(client, msg, args) {
         const chat = await msg.getChat();
         if (!chat.isGroup) return msg.reply('Solo en grupos');
-        const plan = getChatPlan(null, chat.id._serialized);
+        const { getDB } = require('../../utils/db');
+        const db = getDB();
+        const plan = getChatPlan(db, chat.id._serialized);
         if (!isPlanAllowed(plan, 'premium')) return msg.reply('Solo para grupos con plan premium');
         if (!await isAdmin(client, msg) && !isOwner(msg)) return msg.reply('Solo admin/owner pueden usar este comando');
         const section = (args[0] || '').toLowerCase();
