@@ -29,6 +29,13 @@ module.exports = {
             return msg.reply('Usa: .mutetime 10m @usuario o responde');
         }
 
+        // No permitir silenciar admins reales
+        const chat = await msg.getChat();
+        const adminTarget = chat.participants.find(p => p.id._serialized === target && (p.isAdmin || p.isSuperAdmin));
+        if (adminTarget) {
+            return msg.reply('No puedes silenciar a un admin del grupo.');
+        }
+
         const input = (args[0] || '').toLowerCase();
         const num = parseInt(input, 10);
 

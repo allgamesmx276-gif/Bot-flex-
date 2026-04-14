@@ -44,6 +44,12 @@ module.exports = {
                 return msg.reply('No puedes banear al bot');
             }
 
+            // No permitir expulsar admins reales
+            const adminTarget = chat.participants.find(p => p.id._serialized === target && (p.isAdmin || p.isSuperAdmin));
+            if (adminTarget) {
+                return msg.reply('No puedes expulsar a un admin del grupo.');
+            }
+
             await msg.reply(`Usuario eliminado @${target.split('@')[0]}`, undefined, {
                 mentions: [target]
             });
