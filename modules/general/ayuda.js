@@ -242,6 +242,15 @@ const HELP_BY_COMMAND = {
         section('Ejemplo', '.del-auto-responder 1')
     ].join('\n\n'),
 
+    cofre: [
+        section('Que hace', 'Lanza un cofre con puntos de premio que los miembros intentan abrir.'),
+        section('Como usar', '*.cofre* — ver estado | *.cofre abrir* — intentar | *.cofre activar* — (admin) lanzar | *.cofre cerrar* — (admin) cerrar | *.cofre config* — (admin) ajustar'),
+        section('Como funciona', 'El admin configura modo, probabilidad, premio y tiempo. Los miembros usan .cofre abrir para intentar ganarlo.'),
+        section('Modos', '*primero* — el 1er usuario gana directo\n*suerte* — % de prob por intento, 1 ganador\n*todos* — % de prob, varios ganadores posibles'),
+        section('Desde privado', 'Envía *.cofre activar* al bot desde privado — detecta tus grupos y lanza un flujo guiado con preguntas paso a paso.'),
+        section('Ejemplo', '.cofre config modo suerte → .cofre config prob 25 → .cofre activar')
+    ].join('\n\n'),
+
     // ── COMANDOS ADMIN ───────────────────────────────────────────────────────
     ban: [
         section('Que hace', 'Expulsa un usuario del grupo.'),

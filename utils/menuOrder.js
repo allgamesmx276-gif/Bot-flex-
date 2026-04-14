@@ -44,7 +44,8 @@ const DEFAULT_MENU_SECTIONS = {
         'ruleta',
         'batalla',
         'trivia',
-        'respuesta'
+        'respuesta',
+        'cofre'
     ],
     mod: [
         'statusbot',

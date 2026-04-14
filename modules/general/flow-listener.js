@@ -227,6 +227,146 @@ module.exports = {
             return;
         }
 
+        // ── COFRE: flujo desde privado (no requiere chatId === targetGroup) ──────
+        if (isPrivate && db.awaiting[sender] && !body.startsWith('.') &&
+            typeof db.awaiting[sender].step === 'string' &&
+            db.awaiting[sender].step.startsWith('cofre_')) {
+
+            const state = db.awaiting[sender];
+
+            if (text === 'cancelar') {
+                delete db.awaiting[sender];
+                saveDB();
+                msg._flexHandled = true;
+                return msg.reply('❌ Cancelado');
+            }
+
+            const MODO_DESC_FL = {
+                primero: 'El primero que lo intenta gana (sin RNG)',
+                suerte: 'Cada intento tiene prob% de ganar — 1 ganador',
+                todos: 'Cada intento tiene prob% de ganar — multiples ganadores'
+            };
+
+            function launchCofre(targetChatId, targetChatName) {
+                if (!db.cofreGames) db.cofreGames = {};
+                if (!db.cofreGames[targetChatId]) db.cofreGames[targetChatId] = {};
+                const game = db.cofreGames[targetChatId];
+                game.active = true;
+                game.modo = state.modo || 'suerte';
+                game.prob = state.prob || 30;
+                game.premio = state.premio || 50;
+                game.tiempo = state.tiempo || 10;
+                game.openedAt = Date.now();
+                game.expiresAt = Date.now() + game.tiempo * 60 * 1000;
+                game.intentos = [];
+                game.ganadores = [];
+                delete db.awaiting[sender];
+                saveDB();
+
+                // Notificar en el grupo
+                client.sendMessage(targetChatId,
+                    `🎁✨ *¡COFRE DISPONIBLE!* ✨🎁\n\n` +
+                    `🎯 Modo: *${game.modo}* — ${MODO_DESC_FL[game.modo]}\n` +
+                    `🎲 Probabilidad: *${game.prob}%*\n` +
+                    `🏆 Premio: *+${game.premio} puntos*\n` +
+                    `⏱️ Tiempo: *${game.tiempo} min*\n\n` +
+                    `¡Usa *.cofre abrir* para intentarlo!`
+                ).catch(() => {});
+
+                return msg.reply(
+                    `✅ *Cofre lanzado en ${targetChatName}*\n\n` +
+                    `• Modo: ${game.modo}\n` +
+                    `• Prob: ${game.prob}%\n` +
+                    `• Premio: +${game.premio} pts\n` +
+                    `• Tiempo: ${game.tiempo} min`
+                );
+            }
+
+            // Paso 1: elegir grupo de la lista
+            if (state.step === 'cofre_elegir_grupo') {
+                const n = parseInt(text, 10);
+                if (isNaN(n) || n < 1 || n > state.grupos.length) {
+                    msg._flexHandled = true;
+                    return msg.reply(`Elige un número entre 1 y ${state.grupos.length} o escribe "cancelar".`);
+                }
+                const grupo = state.grupos[n - 1];
+                state.chatId = grupo.id;
+                state.chatName = grupo.name;
+                state.step = 'cofre_modo';
+                saveDB();
+                msg._flexHandled = true;
+                return msg.reply(
+                    `📍 Grupo: *${grupo.name}*\n\n` +
+                    `1/3 — ¿Qué modo quieres?\n\n` +
+                    `• *primero* — ${MODO_DESC_FL.primero}\n` +
+                    `• *suerte* — ${MODO_DESC_FL.suerte}\n` +
+                    `• *todos* — ${MODO_DESC_FL.todos}`
+                );
+            }
+
+            // Paso 2: modo
+            if (state.step === 'cofre_modo') {
+                if (!['primero', 'suerte', 'todos'].includes(text)) {
+                    msg._flexHandled = true;
+                    return msg.reply('Escribe: *primero*, *suerte* o *todos*');
+                }
+                state.modo = text;
+                if (text === 'primero') {
+                    // Sin probabilidad para modo primero
+                    state.step = 'cofre_premio';
+                    saveDB();
+                    msg._flexHandled = true;
+                    return msg.reply('2/3 — ¿Cuántos puntos se llevan como premio?\nEjemplo: 50');
+                } else {
+                    state.step = 'cofre_prob';
+                    saveDB();
+                    msg._flexHandled = true;
+                    return msg.reply('2/4 — ¿Qué % de probabilidad de ganar por intento? (1-100)\nEjemplo: 30');
+                }
+            }
+
+            // Paso 3a: probabilidad (solo suerte/todos)
+            if (state.step === 'cofre_prob') {
+                const n = parseInt(text, 10);
+                if (isNaN(n) || n < 1 || n > 100) {
+                    msg._flexHandled = true;
+                    return msg.reply('Ingresa un número entre 1 y 100.');
+                }
+                state.prob = n;
+                state.step = 'cofre_premio';
+                saveDB();
+                msg._flexHandled = true;
+                return msg.reply('3/4 — ¿Cuántos puntos de premio?\nEjemplo: 50');
+            }
+
+            // Paso 3b / 4a: premio
+            if (state.step === 'cofre_premio') {
+                const n = parseInt(text, 10);
+                if (isNaN(n) || n < 1) {
+                    msg._flexHandled = true;
+                    return msg.reply('El premio debe ser mayor a 0.');
+                }
+                state.premio = n;
+                state.step = 'cofre_tiempo';
+                const paso = state.modo === 'primero' ? '3/3' : '4/4';
+                saveDB();
+                msg._flexHandled = true;
+                return msg.reply(`${paso} — ¿Cuántos minutos estará disponible el cofre? (1-1440)\nEjemplo: 10`);
+            }
+
+            // Último paso: tiempo → lanzar
+            if (state.step === 'cofre_tiempo') {
+                const n = parseInt(text, 10);
+                if (isNaN(n) || n < 1 || n > 1440) {
+                    msg._flexHandled = true;
+                    return msg.reply('El tiempo debe ser entre 1 y 1440 minutos.');
+                }
+                state.tiempo = n;
+                msg._flexHandled = true;
+                return launchCofre(state.chatId, state.chatName || state.chatId);
+            }
+        }
+
         if (db.awaiting[sender] && !body.startsWith('.') && db.awaiting[sender].chatId === chatId) {
             const state = db.awaiting[sender];
 

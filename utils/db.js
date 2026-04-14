@@ -43,6 +43,7 @@ const DEFAULT_DB = {
     userHistory: {},
     polls: {},
     triviaGames: {},
+    cofreGames: {},
     userActivity: {},
     userReactions: {},
     pendingBroadcast: null
@@ -87,6 +88,7 @@ function normalizeDB(data = {}) {
         userHistory: data.userHistory || {},
         polls: data.polls || {},
         triviaGames: data.triviaGames && typeof data.triviaGames === 'object' ? data.triviaGames : {},
+        cofreGames: data.cofreGames && typeof data.cofreGames === 'object' ? data.cofreGames : {},
         userActivity: data.userActivity && typeof data.userActivity === 'object' ? data.userActivity : {},
         userReactions: data.userReactions && typeof data.userReactions === 'object' ? data.userReactions : {},
         pendingBroadcast: data.pendingBroadcast || null
