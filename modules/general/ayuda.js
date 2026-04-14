@@ -251,9 +251,9 @@ const HELP_BY_COMMAND = {
         section('Ejemplo', '.cofre config modo suerte → .cofre config prob 25 → .cofre activar')
     ].join('\n\n'),
     bot: [
-        section('Que hace', 'Pone el bot en ON/OFF sin apagar el proceso.'),
+        section('Que hace', 'Pausa o activa respuestas del bot solo en este grupo.'),
         section('Como usar', '.bot on | off | ver'),
-        section('Como funciona', 'En OFF el bot queda en linea pero no responde mensajes ni comandos. Solo acepta .bot on para reactivarse.'),
+        section('Como funciona', 'En OFF el bot queda en linea pero no responde en ese grupo. En otros grupos sigue funcionando normal.'),
         section('Acceso', 'Admins del grupo (ADMIN CTRL).'),
         section('Ejemplo', '.bot off')
     ].join('\n\n'),

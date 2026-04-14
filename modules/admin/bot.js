@@ -12,8 +12,12 @@ module.exports = {
         }
 
         const db = getDB();
+        const chatId = chat.id._serialized;
+        if (!db.pausedGroups || typeof db.pausedGroups !== 'object') {
+            db.pausedGroups = {};
+        }
         const action = String(args[0] || 'ver').toLowerCase();
-        const paused = Boolean(db.config && db.config.botPaused);
+        const paused = Boolean(db.pausedGroups[chatId]);
 
         if (action === 'ver') {
             return msg.reply(
@@ -24,22 +28,22 @@ module.exports = {
 
         if (action === 'off') {
             if (paused) {
-                return msg.reply('El bot ya está en modo OFF (sin responder).');
+                return msg.reply('El bot ya está en modo OFF en este grupo.');
             }
 
-            db.config.botPaused = true;
+            db.pausedGroups[chatId] = true;
             saveDB();
-            return msg.reply('🛑 Bot en *OFF*. Sigo en línea pero dejaré de responder hasta usar *.bot on*.');
+            return msg.reply('🛑 Bot en *OFF* para este grupo. Sigo en línea y respondiendo en otros grupos.');
         }
 
         if (action === 'on') {
             if (!paused) {
-                return msg.reply('El bot ya está en modo ON.');
+                return msg.reply('El bot ya está en modo ON en este grupo.');
             }
 
-            db.config.botPaused = false;
+            delete db.pausedGroups[chatId];
             saveDB();
-            return msg.reply('✅ Bot en *ON*. Ya vuelvo a responder normalmente.');
+            return msg.reply('✅ Bot en *ON* para este grupo. Ya vuelvo a responder aquí.');
         }
 
         return msg.reply('Uso: .bot on | off | ver');

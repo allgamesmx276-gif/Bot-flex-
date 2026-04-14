@@ -42,10 +42,16 @@ async function handleMessage(client, msg) {
         ? body.slice(prefix.length).trim().split(/ +/)
         : [];
     const inputCommandName = (inputParts.shift() || '').toLowerCase();
+    const isGroupChat = String(msg.from || '').endsWith('@g.us');
+    const pausedInGroup = Boolean(
+        isGroupChat &&
+        dbState.pausedGroups &&
+        dbState.pausedGroups[msg.from]
+    );
 
-    // Global pause mode: bot process stays online but ignores all messages,
-    // except the .bot command used to reactivate it.
-    if (dbState.config && dbState.config.botPaused) {
+    // Group pause mode: bot stays online but ignores this group's messages,
+    // except the .bot command used to reactivate it in that same group.
+    if (pausedInGroup) {
         if (!isPrefixed || inputCommandName !== 'bot') return;
     }
 
