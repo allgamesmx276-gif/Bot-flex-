@@ -1,4 +1,25 @@
+const { MessageMedia } = require('whatsapp-web.js');
 const { getDB, saveDB } = require('../../utils/db');
+
+const CONGRATS_STICKER_URLS = [
+    'https://media.tenor.com/mCiM7CmGGI4AAAAi/kiss-bear.gif',
+    'https://media.tenor.com/On7kvXhzml4AAAAi/loading-gif.gif'
+];
+
+async function sendCongratsStickers(client, chatId) {
+    for (const url of CONGRATS_STICKER_URLS) {
+        try {
+            const media = await MessageMedia.fromUrl(url, { unsafeMime: true });
+            await client.sendMessage(chatId, media, {
+                sendMediaAsSticker: true,
+                stickerAuthor: 'FlexBot',
+                stickerName: 'Cofre Winner'
+            });
+        } catch (_) {
+            // Ignore sticker failures and keep winner flow working.
+        }
+    }
+}
 
 function randomBetweenMinutes(minMinutes, maxMinutes) {
     const min = Math.max(1, Number(minMinutes) || 1);
@@ -111,11 +132,27 @@ module.exports = {
                 changed = true;
 
                 await msg.reply(
-                    `🏆 @${winner.split('@')[0]} ganó el *cofre #${cofreNum}*\n` +
+                    `🏆🎉 *¡Felicidades @${winner.split('@')[0]}!*\n` +
+                    `Ganaste el *cofre #${cofreNum}*\n` +
                     `Premio: *+${prize} puntos*`,
                     undefined,
                     { mentions: [winner] }
                 ).catch(() => {});
+
+                await sendCongratsStickers(client, chatId);
+
+                const ownerId = campaign.owner;
+                if (ownerId) {
+                    await client.sendMessage(
+                        ownerId,
+                        `🎁 Cofre ganado\n` +
+                        `Grupo: ${campaign.chatName || chatId}\n` +
+                        `Cofre: #${cofreNum}\n` +
+                        `Ganador: @${winner.split('@')[0]}\n` +
+                        `Premio: +${prize} puntos`,
+                        { mentions: [winner] }
+                    ).catch(() => false);
+                }
             }
         }
 
