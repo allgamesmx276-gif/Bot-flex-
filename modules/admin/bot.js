@@ -3,7 +3,7 @@ const { getDB, saveDB } = require('../../utils/db');
 module.exports = {
     name: 'bot',
     category: 'admin',
-    minPlan: 'basic',
+    minPlan: 'free',
 
     async execute(client, msg, args) {
         const chat = await msg.getChat();
