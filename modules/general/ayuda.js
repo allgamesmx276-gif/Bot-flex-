@@ -3,6 +3,42 @@ function section(title, value) {
 }
 
 const { getCommands } = require('../../handler');
+const fs = require('fs');
+const path = require('path');
+
+function findCommandFile(commandName) {
+    const modulesDir = path.join(process.cwd(), 'modules');
+    const folders = fs.existsSync(modulesDir) ? fs.readdirSync(modulesDir) : [];
+
+    for (const folder of folders) {
+        const filePath = path.join(modulesDir, folder, `${commandName}.js`);
+        if (fs.existsSync(filePath)) return filePath;
+    }
+
+    return null;
+}
+
+function extractSourceHints(commandName) {
+    const filePath = findCommandFile(commandName);
+    if (!filePath) return {};
+
+    try {
+        const source = fs.readFileSync(filePath, 'utf8');
+        const usageMatch = source.match(/Uso:\s*([^'`\n]+)/i);
+        const hasOnOff = /on\s*\|\s*off/i.test(source);
+        const hasView = /\b(ver|view|status)\b/i.test(source);
+        const asksReplyOrMention = /responde|@usuario|quoted/i.test(source);
+
+        return {
+            usage: usageMatch ? usageMatch[1].trim() : null,
+            hasOnOff,
+            hasView,
+            asksReplyOrMention
+        };
+    } catch (_) {
+        return {};
+    }
+}
 
 const HELP_BY_COMMAND = {
     convert: [
@@ -212,18 +248,36 @@ function buildAutoHelp(commandDef) {
     const name = commandDef.name || 'comando';
     const category = commandDef.category || 'general';
     const minPlan = commandDef.minPlan || (category === 'admin' ? 'basic' : category === 'owner' ? 'premium' : 'free');
+    const hints = extractSourceHints(name);
     const access = commandDef.ownerOnly
         ? 'Solo owner'
         : category === 'admin'
             ? 'Admins del grupo y owner'
             : 'Usuarios del grupo (segun plan)';
 
+    let howToUse = `.${name}`;
+    if (hints.usage) {
+        howToUse = hints.usage.startsWith('.') ? hints.usage : `.${hints.usage}`;
+    } else if (hints.hasOnOff && hints.hasView) {
+        howToUse = `.${name} on | off | ver`;
+    } else if (hints.hasOnOff) {
+        howToUse = `.${name} on | off`;
+    }
+
+    let howItWorks = 'Recibe argumentos opcionales y procesa la accion definida para este comando.';
+    if (hints.hasOnOff) {
+        howItWorks = 'Permite activar/desactivar una funcion. Guarda el estado por chat y aplica cambios al instante.';
+    }
+    if (hints.asksReplyOrMention) {
+        howItWorks += '\nPuede requerir mencion de usuario o responder un mensaje.';
+    }
+
     return [
-        section('Que hace', `Ejecuta la funcion del comando *${name}*.`),
-        section('Como usar', `.${name}`),
-        section('Como funciona', 'Recibe argumentos opcionales y procesa la accion definida para este comando.'),
+        section('Que hace', `Comando *${name}* de categoria *${category}* para gestionar una funcion del bot.`),
+        section('Como usar', howToUse),
+        section('Como funciona', howItWorks),
         section('Requisitos', `Categoria: ${category}\nPlan minimo: ${minPlan}\nAcceso: ${access}`),
-        section('Tip', `Si necesitas sintaxis exacta, prueba usar el comando y revisa su mensaje de uso. Ej: .${name}`)
+        section('Tip', `Si necesitas mas detalle, ejecuta .${name} sin parametros para ver validaciones o mensajes guiados.`)
     ].join('\n\n');
 }
 
