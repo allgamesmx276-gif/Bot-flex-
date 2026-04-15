@@ -1,5 +1,13 @@
+// ===============================
+// INICIO BOT
+// ===============================
+console.log('🚀 INICIO: index.js ejecutándose');
+
+let hotReloadWatcher = null;
+
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+
 const { loadCommands, handleMessage } = require('./handler');
 const { ensureDB, getDB, saveDB, logEvent } = require('./utils/db');
 const { readGroupDB } = require('./utils/groupDb');
@@ -8,16 +16,9 @@ const logger = require('./utils/logger');
 const { backupNow } = require('./utils/backup');
 const { POSITIVE_REACTIONS, NEGATIVE_REACTIONS } = require('./utils/rankSystem');
 
-// Debounced save for activity tracking (avoids saving on every message)
-let activitySaveTimer = null;
-function scheduleActivitySave() {
-    if (activitySaveTimer) return;
-    activitySaveTimer = setTimeout(() => {
-        activitySaveTimer = null;
-        saveDB();
-    }, 5000);
-}
-
+// ===============================
+// CLIENTE
+// ===============================
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
@@ -31,97 +32,25 @@ const client = new Client({
         ]
     }
 });
-
-let hotReloadWatcher = null;
-
-function startPlanExpiryScheduler(client) {
-    const CHECK_INTERVAL = 60 * 60 * 1000; // cada hora
-
-    const check = async () => {
-        const db = getDB();
-        const expiries = db.groupPlanExpiry || {};
-        const now = Date.now();
-        const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
-        let changed = false;
-
-        for (const [chatId, expiryMs] of Object.entries(expiries)) {
-            if (!expiryMs) continue;
-            const timeLeft = expiryMs - now;
-
-            if (timeLeft <= 0) {
-                // Expirado → downgrade a free
-                const oldPlan = db.groupPlans[chatId] || 'free';
-                db.groupPlans[chatId] = 'free';
-                delete db.groupPlanExpiry[chatId];
-                changed = true;
-                logger.info('Plan expirado, downgrade a free', { chatId, oldPlan });
-
-                await client.sendMessage(chatId,
-                    `⚠️ *Tu plan ${oldPlan} ha vencido*\n\n` +
-                    `El grupo vuelve al plan *free*.\n` +
-                    `Para renovar contacta al administrador del bot.`
-                ).catch(() => false);
-
-            } else if (timeLeft <= THREE_DAYS) {
-                // Advertencia 3 días antes (una sola vez al aproximarse)
-                const daysLeft = Math.ceil(timeLeft / (24 * 60 * 60 * 1000));
-                const expiryDate = new Date(expiryMs).toLocaleDateString('es-MX', {
-                    day: '2-digit', month: 'long', year: 'numeric'
-                });
-
-                await client.sendMessage(chatId,
-                    `⏳ *Aviso: tu plan vence pronto*\n\n` +
-                    `Plan: *${db.groupPlans[chatId]}*\n` +
-                    `Vence: ${expiryDate} (${daysLeft} día(s))\n\n` +
-                    `Contacta al administrador del bot para renovar.`
-                ).catch(() => false);
-            }
-        }
-
-        if (changed) saveDB();
-    };
-
-    // Primera revisión al arrancar (con delay para que WA esté listo)
-    setTimeout(check, 10000);
-    setInterval(check, CHECK_INTERVAL);
-}
-
-function setupCommandHotReload() {
-    if (hotReloadWatcher) return;
-
-    const modulesDir = './modules';
-    let timer = null;
-
-    hotReloadWatcher = require('fs').watch(modulesDir, { recursive: true }, (eventType, filename) => {
-        if (!filename) return;
-
-        const name = String(filename).toLowerCase();
-        if (!name.endsWith('.js') && !name.endsWith('.disabled.js')) return;
-
-        if (timer) {
-            clearTimeout(timer);
-        }
-
-        timer = setTimeout(() => {
-            try {
-                loadCommands();
-                logger.info('Hot reload aplicado', { eventType, file: filename });
-            } catch (err) {
-                logger.error('Hot reload fallo', { error: err.message, file: filename });
-            }
-        }, 400);
-    });
-}
-
+// ===============================
+// DB Y LOG
+// ===============================
 ensureDB();
 logger.clearLog();
 
+// ===============================
+// QR
+// ===============================
 client.on('qr', qr => {
+    console.log('📱 Escanea el QR');
     qrcode.generate(qr, { small: true });
 });
 
+// ===============================
+// EVENTOS
+// ===============================
 client.on('loading_screen', (percent, message) => {
-    logger.info('Cargando WhatsApp Web', { percent, message });
+    logger.info('Cargando WhatsApp', { percent, message });
 });
 
 client.on('authenticated', () => {
@@ -129,257 +58,136 @@ client.on('authenticated', () => {
 });
 
 client.on('auth_failure', message => {
-    logger.error('Fallo de autenticacion', { message });
+    logger.error('Fallo auth', { message });
 });
 
+// ===============================
+// READY
+// ===============================
 client.on('ready', () => {
-    logger.info('Bot listo');
+    logger.info('🤖 BOT LISTO');
 
-    // Save bot's own number
     try {
         const db = getDB();
-        const botWid = client.info && client.info.wid && client.info.wid._serialized;
+        const botWid = client.info?.wid?._serialized;
+
         if (botWid && db.config.botNumber !== botWid) {
             db.config.botNumber = botWid;
             saveDB();
-            logger.info('Bot number guardado', { botNumber: botWid });
         }
 
-        if (!db.config.ownerClaimed || !db.config.ownerNumber) {
-            logger.info('⚠️  Owner no configurado. Envía .claimowner al bot por privado para registrarte como owner.');
+        if (!db.config.ownerNumber) {
+            console.log('⚠️ Owner no configurado');
         }
 
-        // Send pending broadcast if set
-        if (db.pendingBroadcast) {
-            const broadcastText = db.pendingBroadcast;
-            db.pendingBroadcast = null;
-            saveDB();
-            setTimeout(async () => {
-                try {
-                    const allChats = await client.getChats();
-                    const groups = allChats.filter(c => c.isGroup);
-                    for (const g of groups) {
-                        await client.sendMessage(g.id._serialized, broadcastText).catch(() => false);
-                        await new Promise(r => setTimeout(r, 800));
-                    }
-                    logger.info('pendingBroadcast enviado', { groups: groups.length });
-                } catch (err) {
-                    logger.error('Error enviando pendingBroadcast', { error: err.message });
-                }
-            }, 8000); // wait 8s for WA to be fully ready
-        }
     } catch (err) {
-        logger.error('Error guardando bot number', { error: err.message });
+        logger.error('Error init', { error: err.message });
     }
 
     try {
         backupNow('startup');
-    } catch (err) {
-        logger.error('Backup startup fallido', { error: err.message });
-    }
+    } catch {}
+
     loadCommands();
-    setupCommandHotReload();
     restartAllMsgAuto(client);
-    startPlanExpiryScheduler(client);
 });
-
+// ===============================
+// MESSAGE (FIX PRINCIPAL)
+// ===============================
 client.on('message', async msg => {
-    // Track group activity
     try {
-        if (msg.from && msg.from.endsWith('@g.us') && !msg.fromMe) {
-            const sender = msg.author || msg.from;
-            const chatId = msg.from;
-            const db = getDB();
-            if (!db.userActivity[chatId]) db.userActivity[chatId] = {};
-            if (!db.userActivity[chatId][sender]) db.userActivity[chatId][sender] = { msgs: 0, lastSeen: 0 };
-            db.userActivity[chatId][sender].msgs++;
-            db.userActivity[chatId][sender].lastSeen = Date.now();
-            scheduleActivitySave();
+        const text = (msg.body || '').toLowerCase().trim();
+
+        console.log('📨', text);
+
+        // TEST
+        if (text.includes('ping')) {
+            await client.sendMessage(msg.from, 'pong 🏓');
+            return;
         }
-    } catch (_) {}
 
-    await handleMessage(client, msg);
+        // TRACK ACTIVIDAD
+        try {
+            if (msg.from && msg.from.endsWith('@g.us') && !msg.fromMe) {
+                const sender = msg.author || msg.from;
+                const chatId = msg.from;
+                const db = getDB();
+
+                if (!db.userActivity[chatId]) db.userActivity[chatId] = {};
+                if (!db.userActivity[chatId][sender]) {
+                    db.userActivity[chatId][sender] = { msgs: 0, lastSeen: 0 };
+                }
+
+                db.userActivity[chatId][sender].msgs++;
+                db.userActivity[chatId][sender].lastSeen = Date.now();
+                saveDB();
+            }
+        } catch (_) {}
+
+        // 🔥 Ejecutar comandos automáticos (auto: true) ANTES de checar prefijo
+        await handleMessage(client, msg);
+
+        // PREFIJO
+        const db = getDB();
+        const prefix = db.config?.prefix || '.';
+
+        if (!text.startsWith(prefix)) return;
+
+        // Si ya fue procesado por handleMessage arriba como comando normal (con prefijo),
+        // no hace falta llamarlo de nuevo, pero handleMessage ya tiene lógica interna para separar auto vs normal.
+        // Sin embargo, para consistencia, el flujo ideal es que handleMessage gestione todo.
+
+    } catch (err) {
+        console.log('❌ Error en message:', err.message);
+    }
 });
-
+// ===============================
+// REACCIONES
+// ===============================
 client.on('message_reaction', async (reaction) => {
     try {
-        if (!reaction || !reaction.reaction) return; // empty = reaction removed
+        if (!reaction || !reaction.reaction) return;
+
         const emoji = reaction.reaction;
         const isPos = POSITIVE_REACTIONS.includes(emoji);
         const isNeg = NEGATIVE_REACTIONS.includes(emoji);
+
         if (!isPos && !isNeg) return;
 
-        const chatId = reaction.msgId && reaction.msgId.remote;
+        const chatId = reaction.msgId?.remote;
         if (!chatId || !chatId.endsWith('@g.us')) return;
 
-        // Get author of the reacted message
-        let authorId = reaction.msgId.participant;
-        if (!authorId) {
-            const original = await client.getMessageById(reaction.msgId._serialized).catch(() => null);
-            if (!original) return;
-            authorId = original.author || original.from;
-        }
-        if (!authorId) return;
-        if (authorId === reaction.senderId) return; // skip self-reactions
-
         const db = getDB();
+
         if (!db.userReactions[chatId]) db.userReactions[chatId] = {};
-        if (!db.userReactions[chatId][authorId]) db.userReactions[chatId][authorId] = { pos: 0, neg: 0, detail: {} };
 
-        const data = db.userReactions[chatId][authorId];
-        if (isPos) data.pos++; else data.neg++;
-        data.detail[emoji] = (data.detail[emoji] || 0) + 1;
-        scheduleActivitySave();
-    } catch (err) {
-        logger.error('Error tracking reaction', { error: err.message });
-    }
-});
+        const authorId = reaction.msgId.participant;
+        if (!authorId) return;
 
-client.on('message_create', async msg => {
-    try {
-        if (!msg.fromMe) return;
-
-        const db = getDB();
-        const prefix = db.config.prefix || '.';
-        const text = (msg.body || '').trim().toLowerCase();
-        const shouldHandle =
-            text.startsWith(prefix.toLowerCase()) ||
-            text === 'offline' ||
-            text === 'online' ||
-            text === 'registrar admin' ||
-            text === 'cancelar' ||
-            msg.body === db.config.registerKey;
-
-        if (!shouldHandle) return;
-
-        await handleMessage(client, msg);
-    } catch (err) {
-        logger.error('ERROR MESSAGE_CREATE', { error: err.message });
-    }
-});
-
-client.on('group_join', async notification => {
-    try {
-        const chatId = notification.id.remote;
-        const participantId = notification.id.participant;
-        const botId = client.info && client.info.wid && client.info.wid._serialized;
-
-        if (participantId && botId && participantId === botId) {
-            const db = getDB();
-            const ownerId = db.config && db.config.ownerNumber;
-            const currentPlan = (db.groupPlans && db.groupPlans[chatId]) || 'free';
-            const chat = await client.getChatById(chatId).catch(() => null);
-            const joinedGroupName = chat && chat.name ? chat.name : chatId;
-
-            logEvent(`BOT_JOIN ${chatId}: plan=${currentPlan}`);
-
-            if (ownerId) {
-                const allChats = await client.getChats().catch(() => []);
-                const groups = allChats.filter(item => item && item.isGroup);
-                const groupNames = groups
-                    .map(item => item.name || item.id && item.id._serialized)
-                    .filter(Boolean)
-                    .slice(0, 30)
-                    .join('\n- ');
-
-                const text = [
-                    '🔔 Bot agregado a un grupo',
-                    `Grupo: ${joinedGroupName}`,
-                    `ID: ${chatId}`,
-                    `Total grupos: ${groups.length}`,
-                    '',
-                    `Para activar el plan desde aquí:`,
-                    `.setplan ${chatId} basic`,
-                    '',
-                    groups.length
-                        ? `Grupos actuales:\n- ${groupNames}`
-                        : 'Grupos actuales: ninguno'
-                ].join('\n');
-
-                await client.sendMessage(ownerId, text).catch(() => false);
-            }
-
-            await client.sendMessage(
-                chatId,
-                `✨ *¡Bienvenidos a FlexBot!* ✨\n\n` +
-                `🏷️ Grupo: *${joinedGroupName}*\n` +
-                `💼 Plan actual: *${currentPlan}*\n\n` +
-                `🚀 *Promo temporal activa*\n` +
-                `Escriban *Mejorar plan* en el chat\n` +
-                `y activamos *PREMIUM por 1 mes* para este grupo.\n\n` +
-                `🔥 Aprovechen esta activación especial.`
-            ).catch(() => false);
+        if (!db.userReactions[chatId][authorId]) {
+            db.userReactions[chatId][authorId] = { pos: 0, neg: 0 };
         }
 
-        const groupDb = readGroupDB(chatId);
+        if (isPos) db.userReactions[chatId][authorId].pos++;
+        else db.userReactions[chatId][authorId].neg++;
 
-        if (!groupDb.welcome) return;
+        saveDB();
 
-        const user = notification.id.participant;
-        const mention = '@' + user.split('@')[0];
-        let welcomeText = groupDb.welcomeMsg || 'Bienvenido';
-
-        if (welcomeText.includes('@user')) {
-            welcomeText = welcomeText.replace(/@user/g, mention);
-        } else {
-            welcomeText = `${welcomeText}\n${mention}`;
-        }
-
-        await client.sendMessage(chatId, welcomeText, {
-            mentions: [user]
-        });
     } catch (err) {
-        logger.error('ERROR WELCOME', { error: err.message });
+        logger.error('Error reaction', { error: err.message });
     }
 });
 
-client.on('group_leave', async notification => {
-    try {
-        const chatId = notification.id.remote;
-        const groupDb = readGroupDB(chatId);
-
-        if (!groupDb.goodbye) return;
-
-        const user = notification.id.participant;
-        const mention = '@' + user.split('@')[0];
-        let goodbyeText = groupDb.goodbyeMsg || 'Adiós';
-
-        if (goodbyeText.includes('@user')) {
-            goodbyeText = goodbyeText.replace(/@user/g, mention);
-        } else {
-            goodbyeText = `${goodbyeText}\n${mention}`;
-        }
-
-        await client.sendMessage(chatId, goodbyeText, {
-            mentions: [user]
-        });
-    } catch (err) {
-        logger.error('ERROR GOODBYE', { error: err.message });
-    }
-});
-
-client.on('message_revoke_everyone', async (_, revokedMsg) => {
-    try {
-        if (!revokedMsg) return;
-
-        const groupDb = readGroupDB(revokedMsg.from);
-
-        if (!groupDb.antiDeleteEnabled) return;
-
-        await client.sendMessage(
-            revokedMsg.from,
-            `Eliminado:\n${revokedMsg.body || '[sin texto]'}`
-        );
-    } catch (err) {
-        logger.error('ERROR ANTI-DELETE', { error: err.message });
-    }
-});
-
+// ===============================
+// DESCONECTADO
+// ===============================
 client.on('disconnected', reason => {
-    logger.warn('Cliente desconectado', { reason });
+    console.log('⚠️ Desconectado:', reason);
 });
 
+// ===============================
+// INICIAR
+// ===============================
 client.initialize().catch(err => {
-    logger.error('No se pudo iniciar el bot', { error: err.message });
-    logger.error('Verifica CHROME_PATH si Chrome/Chromium no abre');
+    console.log('❌ Error al iniciar:', err.message);
 });

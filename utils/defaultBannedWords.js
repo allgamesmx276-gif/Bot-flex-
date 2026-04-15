@@ -36,7 +36,6 @@ const DEFAULT_BANNED_WORDS = [
     'cocaína',
     'marihuana',
     'heroína',
-    'meth',
     'fentanilo'
 ];
 

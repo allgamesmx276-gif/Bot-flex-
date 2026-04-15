@@ -3,183 +3,94 @@ const path = require('path');
 const { MessageMedia } = require('whatsapp-web.js');
 const { getDB } = require('../../utils/db');
 const { isAdmin, isModerator, isOwner } = require('../../utils/permissions');
-const { readGroupDB } = require('../../utils/groupDb');
-const { getCustomSections, getOrderedMenuLabels, getOrderedUtilityEntries } = require('../../utils/menuOrder');
 const { getCommands } = require('../../handler');
-const { getChatPlan, getRequiredPlan, isPlanAllowed } = require('../../utils/planAccess');
-
-const GENERAL_DIR = path.join(process.cwd(), 'modules', 'general');
-const DEFAULT_MENU_HEADER_PATH = path.join(process.cwd(), 'storage', 'assets', 'menu-header.jpg');
+const { getChatPlan, isPlanAllowed, getRequiredPlan } = require('../../utils/planAccess');
 
 module.exports = {
     name: 'menu',
     category: 'general',
 
     async execute(client, msg) {
-        const db = getDB();
-        const admin = await isAdmin(client, msg);
-        const owner = isOwner(msg);
-        const moderator = isModerator(msg);
-        const chat = await msg.getChat();
-        const groupDb = chat.isGroup ? readGroupDB(chat.id._serialized) : null;
-        const now = new Date();
-        const requestTime = now.toLocaleTimeString('es-MX', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-        });
+        try {
+            const db = getDB();
+            const prefix = db.config?.prefix || '.';
 
-        const role = owner ? 'OWNER' : admin ? 'ADMIN' : moderator ? 'MOD' : 'USUARIO';
-        const prefix = db.config.prefix || '.';
-        const sender = msg.author || msg.from;
-        const plan = getChatPlan(db, chat.isGroup ? chat.id._serialized : null, sender);
-        const hasPaidPlan = isPlanAllowed(plan, 'basic');
-        const canUseAdminMenu = owner || admin || hasPaidPlan;
-        const canUseModeratorMenu = canUseAdminMenu || moderator;
-        const headerLines = [];
-        const bodyLines = [];
-        const stateIcon = value => (value ? '🟢 ON' : '🔴 OFF');
-        const stateText = value => (groupDb ? stateIcon(Boolean(value)) : '⚪ N/A');
-        const cmd = value => `${prefix}${value}`;
-        const hasGeneralCommand = fileBase => fs.existsSync(path.join(GENERAL_DIR, `${fileBase}.js`));
-        const commandMap = new Map(
-            getCommands()
-                .filter(command => command && command.name && !command.auto)
-                .map(command => [command.name, command])
-        );
+            const owner = isOwner(msg);
+            const admin = await isAdmin(client, msg);
+            const moderator = isModerator(msg);
+            const chatId = msg.from;
+            const sender = msg.author || msg.from;
 
-        const isCommandEnabledByPlan = (commandName, fallbackCategory) => {
-            const name = String(commandName || '').trim().toLowerCase();
-            if (!name) return false;
+            const currentPlan = getChatPlan(db, chatId, sender);
+            const role = owner ? 'OWNER' : admin ? 'ADMIN' : moderator ? 'MOD' : 'USUARIO';
 
-            const command = commandMap.get(name) || { name, category: fallbackCategory || 'general' };
-            if (command.ownerOnly && !owner) return false;
-            const requiredPlan = getRequiredPlan(command);
-            return isPlanAllowed(plan, requiredPlan);
-        };
+            const now = new Date();
+            const time = now.toLocaleTimeString('es-MX', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
 
-        const filterLabelsByPlan = (labels, fallbackCategory) =>
-            labels.filter(label => isCommandEnabledByPlan(label, fallbackCategory));
+            // 📂 Agrupar comandos para armar el menú
+            const allCommands = getCommands().filter(cmd => !cmd.auto && cmd.name);
+            const cmdNames = allCommands.map(c => c.name);
 
-        const addBoxSection = (title, commands) => {
-            if (!commands.length) return;
-            bodyLines.push(`┌ ${title}`);
-            commands.forEach(command => bodyLines.push(`│ ${command}`));
-            bodyLines.push('└');
-            bodyLines.push('');
-        };
+            // 📝 Construir texto del menú con el diseño solicitado
+            let text = `🤖 *FLEXBOT v1.0*\n`;
+            text += `🏷️ *ROL:* ${role}\n`;
+            text += `⚙️ *PREFIJO:* ${prefix}\n`;
+            text += `🕒 *HORA:* ${time}\n`;
+            text += `💼 *PLAN:* ${currentPlan.toUpperCase()}\n\n`;
 
-        const menuTitle = (groupDb && groupDb.menuTitle) || 'FLEXBOT MODULAR';
-        headerLines.push(`🤖 ${menuTitle}`);
-        headerLines.push(`🏷️ ROL: ${role}`);
-        headerLines.push(`⚙️ PREFIJO: ${prefix}`);
-        headerLines.push(`🕒 HORA: ${requestTime}`);
-        bodyLines.push('');
-        headerLines.push(`💼 PLAN: ${plan.toUpperCase()}`);
+            // 🛡️ STATUS (Dinamizando estados comunes)
+            const getStatus = (key) => db[key]?.[chatId] || db[key + 'Enabled']?.[chatId] ? '🟢 ON' : '🔴 OFF';
+            text += `┌ 🛡️ *STATUS*\n`;
+            text += `│ ${getStatus('welcome')} welcome\n`;
+            text += `│ ${getStatus('goodbye')} goodbye\n`;
+            text += `│ ${getStatus('antiLink')} anti-link\n`;
+            text += `│ ${getStatus('antiDelete')} anti-delete\n`;
+            text += `│ ${getStatus('autoResponder')} auto-responder\n`;
+            text += `│ ${getStatus('msgAuto')} msg-auto\n`;
+            text += `│ ${getStatus('bannedWords')} bannedwords\n`;
+            text += `└\n\n`;
 
-        const disabledSections = (groupDb && Array.isArray(groupDb.disabledMenuSections)) ? groupDb.disabledMenuSections : [];
-        if (canUseAdminMenu) {
-            if (isPlanAllowed(plan, 'basic') && !disabledSections.includes('status')) {
-                addBoxSection('🛡️ STATUS', [
-                    `${stateText(groupDb && groupDb.welcome)} welcome`,
-                    `${stateText(groupDb && groupDb.goodbye)} goodbye`,
-                    `${stateText(groupDb && groupDb.antiLinkEnabled)} anti-link`,
-                    `${stateText(groupDb && groupDb.antiDeleteEnabled)} anti-delete`,
-                    `${stateText(groupDb && groupDb.autoResponderEnabled)} auto-responder`,
-                    `${stateText(groupDb && groupDb.msgAutoEnabled)} msg-auto`,
-                    `${stateText(groupDb && groupDb.bannedWordsEnabled)} bannedwords`
-                ]);
+            // 🛡️ SECCIONES DE COMANDOS
+            const buildSection = (title, list) => {
+                const available = list.filter(c => cmdNames.includes(c));
+                if (available.length === 0) return '';
+                let section = `┌ 🛡️ *${title}*\n`;
+                section += available.map(c => `│ ${prefix}${c}`).join('\n');
+                section += `\n└\n\n`;
+                return section;
+            };
+
+            // Definición de grupos según el diseño del usuario
+            text += buildSection('ADMIN MSG', ['setwelcome', 'setgoodbye', 'add-auto-responder', 'list-auto-responder', 'del-auto-responder', 'add-msg-auto', 'list-msg-auto', 'del-msg-auto']);
+            text += buildSection('ADMIN MOD', ['ban', 'warn', 'mutetime', 'unmute', 'open', 'close', 'bannedwords', 'addbannedword', 'delbannedword', 'resetbannedwords', 'ranking', 'inactivos', 'expulsar-inactivos']);
+            text += buildSection('ADMIN CTRL', ['checkcmds', 'offline', 'online', 'setmenuname', 'setmenuimg', 'bot', 'reporte', 'comentario']);
+            text += buildSection('DIVERSION', ['matar', 'casarse', 'gay', 'lesbiana', 'ship', 'simulador', 'ruleta', 'batalla', 'trivia', 'respuesta', 'cofre']);
+            text += buildSection('UTILIDADES', ['convert', 'ayuda', 'tips', 'historial', '8ball', 'calc', 'caraocruz', 'recordar', 'clima', 'qr', 'traducir', 'frase', 'chiste', 'dado', 'miid', 'random', 'userinfo', 'afk', 's', 'perfil', 'miranking', 'rangos']);
+            text += buildSection('OWNER SYS', ['reload', 'setowner', 'setprefix', 'addmod', 'delmod', 'listmods', 'delcmd', 'disablecmd', 'enablecmd', 'backupnow', 'claimowner', 'listadmins', 'setcmdplan', 'setplan', 'bulksetplan', 'broadcast', 'setregisterkey', 'verregisterkey', 'setlogskey', 'menusection', 'movecmd']);
+
+            text += `*FlexBot Modular v1.0*`;
+
+            text = text.trim();
+
+            // ===============================
+            // IMAGEN ENCABEZADO
+            // ===============================
+            const imagePath = path.join(process.cwd(), 'storage', 'assets', 'menu-header.jpg');
+
+            if (fs.existsSync(imagePath)) {
+                const media = MessageMedia.fromFilePath(imagePath);
+                await client.sendMessage(msg.from, media, { caption: text });
+            } else {
+                await client.sendMessage(msg.from, text);
             }
 
-            if (!disabledSections.includes('adminmsg')) {
-                addBoxSection(
-                    '🛡️ ADMIN MSG',
-                    filterLabelsByPlan(getOrderedMenuLabels(db, 'adminMsg'), 'admin').map(cmd)
-                );
-            }
-            if (!disabledSections.includes('adminmod')) {
-                addBoxSection(
-                    '🛡️ ADMIN MOD',
-                    filterLabelsByPlan(getOrderedMenuLabels(db, 'adminMod'), 'admin').map(cmd)
-                );
-            }
-            if (!disabledSections.includes('adminctrl')) {
-                addBoxSection(
-                    '🛡️ ADMIN CTRL',
-                    filterLabelsByPlan(getOrderedMenuLabels(db, 'adminCtrl'), 'admin').map(cmd)
-                );
-            }
-
-            const customAdminSections = getCustomSections(db, 'admin')
-                .filter(section => !disabledSections.includes(section.key))
-                .map(section => ({
-                    title: `🛡️ ${section.title.toUpperCase()}`,
-                    commands: filterLabelsByPlan(section.commands, 'admin').map(cmd)
-                }))
-                .filter(section => section.commands.length > 0);
-
-            customAdminSections.forEach(section => addBoxSection(section.title, section.commands));
-        }
-
-        const utilEntries = getOrderedUtilityEntries(db);
-
-        if (!disabledSections.includes('diversion')) {
-            addBoxSection(
-                '🎉 DIVERSION',
-                filterLabelsByPlan(getOrderedMenuLabels(db, 'diversion'), 'general').map(cmd)
-            );
-        }
-
-        const utilCommands = utilEntries
-            .filter(([, fileBase]) => hasGeneralCommand(fileBase))
-            .filter(([, fileBase]) => isCommandEnabledByPlan(fileBase, 'general'))
-            .map(([label]) => cmd(label));
-
-        if (!disabledSections.includes('utilities')) {
-            addBoxSection('🌐 UTILIDADES', utilCommands);
-        }
-
-        const userLabelToFileBase = new Map(utilEntries.map(([label, fileBase]) => [label, fileBase]));
-        const customUserSections = getCustomSections(db, 'user')
-            .map(section => {
-                const commands = section.commands
-                    .filter(label => hasGeneralCommand(userLabelToFileBase.get(label)))
-                    .filter(label => isCommandEnabledByPlan(userLabelToFileBase.get(label), 'general'))
-                    .map(label => cmd(label));
-
-                return {
-                    title: `🌐 ${section.title.toUpperCase()}`,
-                    commands
-                };
-            })
-            .filter(section => section.commands.length > 0);
-
-        customUserSections.filter(section => !disabledSections.includes(section.key)).forEach(section => addBoxSection(section.title, section.commands));
-
-        if (owner && !disabledSections.includes('ownersys')) {
-            addBoxSection(
-                '👑 OWNER SYS',
-                filterLabelsByPlan(getOrderedMenuLabels(db, 'ownerSys'), 'owner').map(cmd)
-            );
-        }
-
-        bodyLines.push('FlexBot Modular v1.0');
-        const headerText = headerLines.join('\n');
-        const bodyText = bodyLines.join('\n');
-        const fullText = `${headerText}\n\n${bodyText}`;
-
-        const configuredImage = groupDb && groupDb.menuHeaderImage
-            ? path.resolve(process.cwd(), groupDb.menuHeaderImage)
-            : db.config.menuHeaderImage
-                ? path.resolve(process.cwd(), db.config.menuHeaderImage)
-                : DEFAULT_MENU_HEADER_PATH;
-
-        if (fs.existsSync(configuredImage)) {
-            const media = MessageMedia.fromFilePath(configuredImage);
-            await msg.reply(media, undefined, { caption: fullText });
-        } else {
-            await msg.reply(fullText);
+        } catch (err) {
+            console.log('❌ Error menu:', err.message);
+            await client.sendMessage(msg.from, '❌ Error mostrando menú');
         }
     }
 };

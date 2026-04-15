@@ -20,6 +20,34 @@ function getPossibleSenderIds(msg) {
     ].filter(Boolean);
 }
 
+// 🔑 OWNER
+function isOwner(msg) {
+    const db = getDB();
+    const ownerNumber = db.config?.ownerNumber;
+
+    if (msg.fromMe) {
+        console.log('[PERM] Owner detectado (fromMe)');
+        return true;
+    }
+
+    if (!ownerNumber) {
+        console.log('[PERM] ownerNumber no configurado');
+        return false;
+    }
+
+    const normalizedOwner = normalizeWhatsAppId(ownerNumber);
+    const senders = getPossibleSenderIds(msg);
+
+    const found = senders.some(sender =>
+        sender === ownerNumber ||
+        normalizeWhatsAppId(sender) === normalizedOwner
+    );
+
+    console.log('[PERM] isOwner:', found);
+    return found;
+}
+
+// 👑 ADMIN (WhatsApp)
 async function isAdmin(client, msg) {
     if (isOwner(msg)) return true;
 
@@ -31,75 +59,65 @@ async function isAdmin(client, msg) {
         const normalizedSender = normalizeWhatsAppId(senderId);
 
         const participant = chat.participants.find(p => {
-            const participantId = p.id._serialized;
-            return participantId === senderId || normalizeWhatsAppId(participantId) === normalizedSender;
+            const id = p.id._serialized;
+            return id === senderId || normalizeWhatsAppId(id) === normalizedSender;
         });
 
-        return !!participant && (participant.isAdmin || participant.isSuperAdmin);
+        const result = !!participant && (participant.isAdmin || participant.isSuperAdmin);
+        console.log('[PERM] isAdmin:', result);
+        return result;
+
     } catch (err) {
-        console.error('Error isAdmin:', err);
+        console.error('[PERM] Error isAdmin:', err.message);
         return false;
     }
 }
 
+// 🤖 BOT ADMIN
 async function isBotAdmin(client, msg) {
     try {
         if (!msg.from.endsWith('@g.us')) return false;
 
         const chat = await msg.getChat();
         const botId = client.info.wid._serialized;
+
         const bot = chat.participants.find(p => p.id._serialized === botId);
 
         return !!bot && (bot.isAdmin || bot.isSuperAdmin);
+
     } catch (err) {
-        console.error('Error isBotAdmin:', err);
+        console.error('[PERM] Error isBotAdmin:', err.message);
         return false;
     }
 }
 
+// 📋 ADMIN REGISTRADO (DB)
 function isRegisteredAdmin(msg) {
     const db = getDB();
     const senders = getPossibleSenderIds(msg);
 
-    return senders.some(sender => db.admins.includes(sender));
+    return senders.some(sender =>
+        (db.admins || []).includes(sender)
+    );
 }
 
+// 🛡️ MODERADOR (FIXED)
 function isModerator(msg) {
-    if (isOwner(msg) || isRegisteredAdmin(msg)) {
-        return false;
-    }
-
     const db = getDB();
     const senders = getPossibleSenderIds(msg);
 
-    return senders.some(sender => db.moderators.includes(sender));
+    return senders.some(sender =>
+        (db.moderators || []).includes(sender)
+    );
 }
 
+// 🔐 ACCESOS
 function hasRegisteredAdminAccess(msg) {
     return isOwner(msg) || isRegisteredAdmin(msg);
 }
 
 function hasModeratorAccess(msg) {
-    return hasRegisteredAdminAccess(msg) || isModerator(msg);
-}
-
-function isOwner(msg) {
-    const db = getDB();
-    const ownerNumber = db.config.ownerNumber;
-
-    if (msg.fromMe) {
-        return true;
-    }
-
-    if (!ownerNumber) return false;
-
-    const normalizedOwner = normalizeWhatsAppId(ownerNumber);
-    const senders = getPossibleSenderIds(msg);
-
-    return senders.some(sender =>
-        sender === ownerNumber ||
-        normalizeWhatsAppId(sender) === normalizedOwner
-    );
+    return isOwner(msg) || isRegisteredAdmin(msg) || isModerator(msg);
 }
 
 module.exports = {
