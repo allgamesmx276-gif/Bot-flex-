@@ -19,11 +19,13 @@ const { POSITIVE_REACTIONS, NEGATIVE_REACTIONS } = require('./utils/rankSystem')
 // ===============================
 // CLIENTE
 // ===============================
+const isLinux = process.platform === 'linux';
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
         headless: true,
-        executablePath: process.env.CHROME_PATH || undefined,
+        // En VPS Linux normalmente es /usr/bin/google-chrome-stable o /usr/bin/chromium
+        executablePath: process.env.CHROME_PATH || (isLinux ? '/usr/bin/google-chrome-stable' : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'),
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -95,15 +97,20 @@ client.on('ready', () => {
 // MESSAGE (FIX PRINCIPAL)
 // ===============================
 client.on('message', async msg => {
+    console.log(`\n--- 📥 NUEVO MENSAJE ---`);
+    console.log(`De: ${msg.from}`);
+    console.log(`Cuerpo: "${msg.body}"`);
+    console.log(`Es de bot (fromMe): ${msg.fromMe}`);
+    console.log(`Tipo: ${msg.type}`);
+
     try {
         const text = (msg.body || '').toLowerCase().trim();
 
-        console.log('📨', text);
-
         // TEST
-        if (text.includes('ping')) {
-            await client.sendMessage(msg.from, 'pong 🏓');
-            return;
+        if (text === 'ping') {
+            console.log('🎯 Detectado "ping" simple, respondiendo...');
+            // await client.sendMessage(msg.from, 'pong 🏓');
+            // return;
         }
 
         // TRACK ACTIVIDAD
@@ -124,18 +131,8 @@ client.on('message', async msg => {
             }
         } catch (_) {}
 
-        // 🔥 Ejecutar comandos automáticos (auto: true) ANTES de checar prefijo
+        // 🔥 Ejecutar todo a través de handleMessage (incluye auto y normales)
         await handleMessage(client, msg);
-
-        // PREFIJO
-        const db = getDB();
-        const prefix = db.config?.prefix || '.';
-
-        if (!text.startsWith(prefix)) return;
-
-        // Si ya fue procesado por handleMessage arriba como comando normal (con prefijo),
-        // no hace falta llamarlo de nuevo, pero handleMessage ya tiene lógica interna para separar auto vs normal.
-        // Sin embargo, para consistencia, el flujo ideal es que handleMessage gestione todo.
 
     } catch (err) {
         console.log('❌ Error en message:', err.message);

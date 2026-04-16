@@ -57,16 +57,21 @@ function loadCommands() {
 }
 async function handleMessage(client, msg) {
     try {
-        if (!msg.body) return;
+        if (!msg.body) {
+            console.log('🔇 Mensaje sin cuerpo, ignorando.');
+            return;
+        }
 
         // 🔥 evitar doble ejecución
-        
+        console.log(`🔍 Procesando en handler: "${msg.body.slice(0, 20)}..."`);
 
         const dbState = getDB();
         const prefix = dbState.config.prefix || '.';
+        console.log(`⚙️ Prefijo configurado: "${prefix}"`);
 
         const body = String(msg.body).trim();
         const isPrefixed = body.startsWith(prefix);
+        console.log(`🚩 ¿Tiene prefijo?: ${isPrefixed}`);
 
         const isGroupChat = String(msg.from || '').endsWith('@g.us');
         const pausedInGroup = Boolean(
@@ -74,35 +79,54 @@ async function handleMessage(client, msg) {
             dbState.pausedGroups &&
             dbState.pausedGroups[msg.from]
         );
+        
+        if (pausedInGroup) console.log('🛑 Grupo pausado');
 
         // 🔒 grupo pausado
         if (pausedInGroup) {
-            if (!isPrefixed || !body.toLowerCase().includes('bot')) return;
+            if (!isPrefixed || !body.toLowerCase().includes('bot')) {
+                console.log('⏭️ Ignorando por pausa en grupo');
+                return;
+            }
         }
 
         // ⚡ comandos automáticos
+        let autoExecuted = 0;
         for (const cmd of commands) {
             if (!cmd.auto) continue;
 
             try {
                 await cmd.execute(client, msg);
+                autoExecuted++;
             } catch (err) {
-                console.log(`Error en comando auto ${cmd.name}:`, err.message);
+                console.log(`❌ Error en comando auto ${cmd.name}:`, err.message);
             }
         }
+        if (autoExecuted > 0) console.log(`⚡ Comandos auto ejecutados: ${autoExecuted}`);
 
         // Si el comando fue marcado como manejado por un comando auto, detenemos el flujo
-        if (msg._flexHandled) return;
+        if (msg._flexHandled) {
+            console.log('✅ Marcado como manejado (_flexHandled)');
+            return;
+        }
 
-        if (!isPrefixed) return;
+        if (!isPrefixed) {
+            console.log('⏭️ No tiene prefijo, terminando handleMessage');
+            return;
+        }
 
         const args = body.slice(prefix.length).trim().split(/ +/);
         const commandName = (args.shift() || '').toLowerCase();
+        console.log(`⌨️ Comando intentado: "${commandName}"`);
 
         const command = commands.find(cmd => !cmd.auto && cmd.name === commandName);
 
-        if (!command) return;
+        if (!command) {
+            console.log(`❓ Comando "${commandName}" no encontrado.`);
+            return;
+        }
 
+        console.log(`🎯 Comando encontrado: ${command.name}. Verificando permisos...`);
         const owner = isOwner(msg);
 
         // 🔒 owner only
@@ -157,11 +181,14 @@ Contacta al administrador del bot para mejorar tu plan.`
 
         // 🚀 ejecutar comando
         console.log('👉 Ejecutando comando:', command.name);
+        msg._flexHandled = true;
         await command.execute(client, msg, args);
 
     } catch (err) {
         logger.error('Error general en handler', { error: err.message });
-        msg.reply('❌ Error interno en el bot');
+        if (!msg._flexHandled) {
+            msg.reply('❌ Error interno en el bot');
+        }
     }
 }
 

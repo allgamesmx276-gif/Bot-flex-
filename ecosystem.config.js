@@ -10,8 +10,7 @@ module.exports = {
             max_memory_restart: '500M',
             env: {
                 NODE_ENV: 'production',
-                LOG_LEVEL: 'warn',
-                CHROME_PATH: '/usr/bin/chromium-browser'
+                LOG_LEVEL: 'warn'
             }
         }
     ]
