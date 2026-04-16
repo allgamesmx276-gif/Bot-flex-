@@ -24,8 +24,8 @@ const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
         headless: true,
-        // En VPS Linux normalmente es /usr/bin/google-chrome-stable o /usr/bin/chromium
-        executablePath: process.env.CHROME_PATH || (isLinux ? '/usr/bin/google-chrome-stable' : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'),
+        // En VPS Linux normalmente es /usr/bin/google-chrome-stable, /usr/bin/chromium-browser o /usr/bin/chromium
+        executablePath: process.env.CHROME_PATH || (isLinux ? '/usr/bin/chromium' : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'),
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
