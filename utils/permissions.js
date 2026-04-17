@@ -139,10 +139,22 @@ async function isBotAdmin(client, msg) {
 function isRegisteredAdmin(msg) {
     const db = getDB();
     const senders = getPossibleSenderIds(msg);
+    const ownerNumber = db.config?.ownerNumber;
 
-    return senders.some(sender =>
-        (db.admins || []).includes(sender)
-    );
+    // Si es el owner definido en config, siempre tiene acceso
+    if (isOwner(msg)) return true;
+
+    return senders.some(sender => {
+        const pure = sender.split(':')[0].split('@')[0];
+        
+        // Verificar en la lista de admins de la DB
+        const inDb = (db.admins || []).some(adminId => {
+            const adminPure = adminId.split(':')[0].split('@')[0];
+            return adminPure === pure;
+        });
+
+        return inDb;
+    });
 }
 
 // 🛡️ MODERADOR (FIXED)
