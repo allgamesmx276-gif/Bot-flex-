@@ -52,7 +52,8 @@ async function isAdmin(client, msg) {
     if (isOwner(msg)) return true;
 
     try {
-        if (!msg.from.endsWith('@g.us')) return false;
+        const chatId = msg.from;
+        if (!chatId.endsWith('@g.us')) return false;
 
         const chat = await msg.getChat();
         const senderId = msg.author || msg.from;
@@ -60,7 +61,15 @@ async function isAdmin(client, msg) {
         // WhatsApp Web.js a veces devuelve el ID con o sin el sufijo :index
         const senderPure = senderId.split(':')[0].split('@')[0];
 
-        const participant = chat.participants.find(p => {
+        // FORZAR RECARGA DE PARTICIPANTES (A veces WhatsApp Web.js tiene caché vieja)
+        if (chat.groupMetadata && typeof chat.fetchMessages === 'function') {
+            try {
+                // Truco para forzar una pequeña actualización
+                await chat.getContact(); 
+            } catch(e) {}
+        }
+
+        const participant = (chat.participants || []).find(p => {
             const pId = p.id._serialized;
             const pPure = pId.split(':')[0].split('@')[0];
             return pPure === senderPure;
@@ -68,14 +77,24 @@ async function isAdmin(client, msg) {
 
         const result = !!participant && (participant.isAdmin || participant.isSuperAdmin);
         
-        // Log CRÍTICO para ver qué está pasando realmente en el VPS
-        console.log(`[DEBUG_ADMIN] Group: ${msg.from}`);
-        console.log(`[DEBUG_ADMIN] Sender: ${senderId} (Pure: ${senderPure})`);
-        if (participant) {
-            console.log(`[DEBUG_ADMIN] Found Participant: ${participant.id._serialized} | isAdmin: ${participant.isAdmin} | isSuperAdmin: ${participant.isSuperAdmin}`);
+        // LOGS AGRESIVOS DE DEBUG - COPIA ESTO SI FALLA
+        console.log(`--- DEBUG ADMIN START ---`);
+        console.log(`Chat: ${chatId}`);
+        console.log(`Sender ID: ${senderId} | Pure: ${senderPure}`);
+        console.log(`Total Participants in list: ${chat.participants ? chat.participants.length : 0}`);
+        
+        if (!participant) {
+            console.log(`[!] SENDER NOT FOUND IN PARTICIPANT LIST`);
+            // Listamos los primeros 3 para ver el formato que tienen
+            if (chat.participants && chat.participants.length > 0) {
+                console.log(`Sample Participants Format:`);
+                chat.participants.slice(0, 3).forEach(p => console.log(` - ${p.id._serialized} (Admin: ${p.isAdmin})`));
+            }
         } else {
-            console.log(`[DEBUG_ADMIN] Participant NOT FOUND in chat.participants list`);
+            console.log(`Participant Found: ${participant.id._serialized} | isAdmin: ${participant.isAdmin} | isSuperAdmin: ${participant.isSuperAdmin}`);
         }
+        console.log(`Result: ${result}`);
+        console.log(`--- DEBUG ADMIN END ---`);
 
         return result;
 
