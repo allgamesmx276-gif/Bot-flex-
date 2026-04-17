@@ -29,6 +29,9 @@ function normalizePlan(value) {
 }
 
 function getChatPlan(db, chatId, senderNumber) {
+    // 🔥 TODOS LOS GRUPOS TIENEN PLAN PREMIUM SIN EXPIRACIÓN
+    return 'premium';
+
     if (!chatId || !chatId.endsWith('@g.us')) {
         return 'premium';
     }
