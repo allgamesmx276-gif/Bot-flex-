@@ -56,19 +56,25 @@ async function isAdmin(client, msg) {
 
         const chat = await msg.getChat();
         const senderId = msg.author || msg.from;
-        const normalizedSender = normalizeWhatsAppId(senderId);
+        
+        // WhatsApp Web.js a veces devuelve el ID con o sin el sufijo :index
+        const senderPure = senderId.split(':')[0].split('@')[0];
 
         const participant = chat.participants.find(p => {
-            const id = p.id._serialized;
-            // Comparamos por ID completo o normalizado para mayor precisión
-            return id === senderId || normalizeWhatsAppId(id) === normalizedSender;
+            const pId = p.id._serialized;
+            const pPure = pId.split(':')[0].split('@')[0];
+            return pPure === senderPure;
         });
 
         const result = !!participant && (participant.isAdmin || participant.isSuperAdmin);
         
-        // Log detallado para debug en el VPS si sigue fallando
-        if (!result) {
-            console.log(`[PERM] Admin Check Fail: Sender ${senderId} not found or not admin in group ${msg.from}`);
+        // Log CRÍTICO para ver qué está pasando realmente en el VPS
+        console.log(`[DEBUG_ADMIN] Group: ${msg.from}`);
+        console.log(`[DEBUG_ADMIN] Sender: ${senderId} (Pure: ${senderPure})`);
+        if (participant) {
+            console.log(`[DEBUG_ADMIN] Found Participant: ${participant.id._serialized} | isAdmin: ${participant.isAdmin} | isSuperAdmin: ${participant.isSuperAdmin}`);
+        } else {
+            console.log(`[DEBUG_ADMIN] Participant NOT FOUND in chat.participants list`);
         }
 
         return result;
