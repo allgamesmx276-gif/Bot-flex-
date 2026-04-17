@@ -62,10 +62,11 @@ function isPlanExpired(db, chatId) {
 }
 
 function getRequiredPlan(command) {
-    if (!command || !command.name) return 'free';
+    if (!command) return 'free';
+    const commandName = String(command.name || '').trim().toLowerCase();
+    if (!commandName) return 'free';
 
     const db = getDB();
-    const commandName = String(command.name || '').trim().toLowerCase();
     const fromDb = normalizePlan(db.commandPlans && db.commandPlans[commandName]);
     if (fromDb) return fromDb;
 
@@ -75,7 +76,7 @@ function getRequiredPlan(command) {
     const fromDefaultMap = normalizePlan(DEFAULT_COMMAND_PLAN[commandName]);
     if (fromDefaultMap) return fromDefaultMap;
 
-    const fromCategory = normalizePlan(DEFAULT_CATEGORY_PLAN[command.category]);
+    const fromCategory = normalizePlan(command.category ? DEFAULT_CATEGORY_PLAN[command.category] : null);
     return fromCategory || 'free';
 }
 
