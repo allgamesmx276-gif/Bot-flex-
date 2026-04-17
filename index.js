@@ -107,25 +107,13 @@ client.on('group_join', async (notification) => {
         if (contact.id._serialized === botId) {
             console.log(`\n📥 BOT unido al grupo: ${chat.name}`);
             
-            const db = getDB();
-            if (!db.admins) db.admins = [];
-
-            let addedCount = 0;
-            for (const participant of chat.participants) {
-                if (participant.isAdmin || participant.isSuperAdmin) {
-                    const adminId = participant.id._serialized;
-                    if (!db.admins.includes(adminId)) {
-                        db.admins.push(adminId);
-                        addedCount++;
-                    }
-                }
-            }
-
-            if (addedCount > 0) {
-                saveDB();
-                console.log(`✅ Se registraron automáticamente ${addedCount} administradores.`);
-                await client.sendMessage(chat.id._serialized, `✅ ¡Hola! He registrado automáticamente a los ${addedCount} administradores del grupo.`);
-            }
+            // Ya no los añadimos a db.admins GLOBAL para evitar que sean admins en otros grupos.
+            // Los permisos se verificarán en tiempo real por el sistema de WhatsApp.
+            
+            const adminsInGroup = chat.participants.filter(p => p.isAdmin || p.isSuperAdmin);
+            
+            await client.sendMessage(chat.id._serialized, `✅ ¡Hola! He configurado los permisos de administrador automáticamente para este grupo.`);
+            console.log(`✅ Grupo ${chat.name} configurado con ${adminsInGroup.length} administradores.`);
         }
     } catch (err) {
         console.error('❌ Error en group_join:', err.message);
