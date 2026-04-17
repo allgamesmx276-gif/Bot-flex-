@@ -60,11 +60,17 @@ async function isAdmin(client, msg) {
 
         const participant = chat.participants.find(p => {
             const id = p.id._serialized;
+            // Comparamos por ID completo o normalizado para mayor precisión
             return id === senderId || normalizeWhatsAppId(id) === normalizedSender;
         });
 
         const result = !!participant && (participant.isAdmin || participant.isSuperAdmin);
-        console.log('[PERM] isAdmin:', result);
+        
+        // Log detallado para debug en el VPS si sigue fallando
+        if (!result) {
+            console.log(`[PERM] Admin Check Fail: Sender ${senderId} not found or not admin in group ${msg.from}`);
+        }
+
         return result;
 
     } catch (err) {
