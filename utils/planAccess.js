@@ -24,6 +24,7 @@ const DEFAULT_COMMAND_PLAN = {
 };
 
 function normalizePlan(value) {
+    if (typeof value !== 'string') return null; // 🔥 FIX: t.replace is actually normalizePlan crashing on non-strings
     const plan = String(value || '').trim().toLowerCase();
     return PLAN_ORDER.includes(plan) ? plan : null;
 }
@@ -64,6 +65,8 @@ function isPlanExpired(db, chatId) {
 function getRequiredPlan(command) {
     if (!command) return 'free';
     const commandName = String(command.name || '').trim().toLowerCase();
+    
+    // 🔥 FIX: check commandName before using in normalizePlan/t.replace
     if (!commandName) return 'free';
 
     const db = getDB();
