@@ -9,22 +9,21 @@ module.exports = {
 
     async execute(client, msg) {
         try {
+            // Optimización: verificación rápida antes de getChat()
+            if (!msg.from.endsWith('@g.us')) return;
+
+            const text = (msg.body || '').toLowerCase();
+            if (!text.includes('http') && !text.includes('wa.me') && !text.includes('.com')) {
+                return;
+            }
+
             const chat = await msg.getChat();
-
-            if (!chat.isGroup) return;
-
             const chatId = chat.id._serialized;
             const groupDb = readGroupDB(chatId);
 
             if (!groupDb.antiLinkEnabled) return;
             if (await isAdmin(client, msg)) return;
-
-            const text = (msg.body || '').toLowerCase();
-
-            if (!text.includes('http') && !text.includes('wa.me') && !text.includes('.com')) {
-                return;
-            }
-
+            
             const contact = await msg.getContact();
             const user = contact.id._serialized;
 

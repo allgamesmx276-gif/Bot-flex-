@@ -30,7 +30,13 @@ const client = new Client({
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--disable-gpu'
+            '--disable-gpu',
+            '--no-zygote',
+            '--disable-extensions',
+            '--disable-accelerated-2d-canvas',
+            '--disable-setuid-sandbox',
+            '--no-first-run',
+            '--no-startup-window'
         ]
     }
 });

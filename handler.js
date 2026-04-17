@@ -73,7 +73,7 @@ async function handleMessage(client, msg) {
         const isPrefixed = body.startsWith(prefix);
         console.log(`🚩 ¿Tiene prefijo?: ${isPrefixed}`);
 
-        const isGroupChat = String(msg.from || '').endsWith('@g.us');
+        const isGroupChat = msg.from.endsWith('@g.us');
         const pausedInGroup = Boolean(
             isGroupChat &&
             dbState.pausedGroups &&
@@ -82,7 +82,7 @@ async function handleMessage(client, msg) {
         
         if (pausedInGroup) console.log('🛑 Grupo pausado');
 
-        // 🔒 grupo pausado
+        // 🔒 grupo pausado o no procesable
         if (pausedInGroup) {
             if (!isPrefixed || !body.toLowerCase().includes('bot')) {
                 console.log('⏭️ Ignorando por pausa en grupo');
@@ -90,12 +90,16 @@ async function handleMessage(client, msg) {
             }
         }
 
+        // Si no es comando y no tiene prefijo, y ya verificamos que no es algo para "bot" en pausa,
+        // podemos hacer un check rápido para comandos auto o salir.
+        
         // ⚡ comandos automáticos
         let autoExecuted = 0;
         for (const cmd of commands) {
             if (!cmd.auto) continue;
 
             try {
+                // Los comandos auto deben ser ultra-rápidos
                 await cmd.execute(client, msg);
                 autoExecuted++;
             } catch (err) {

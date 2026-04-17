@@ -10,20 +10,22 @@ module.exports = {
         if (!msg.body) return;
         if (msg.fromMe) return;
 
-        const chat = await msg.getChat();
-        if (!chat.isGroup) return;
+        // Optimización: verificación rápida antes de getChat()
+        if (!msg.from.endsWith('@g.us')) return;
 
-        const chatId = chat.id._serialized;
+        const text = msg.body.toLowerCase();
+        const chatId = msg.from;
         const groupDb = readGroupDB(chatId);
 
         if (!groupDb.bannedWordsEnabled) return;
         if (!groupDb.bannedWords || groupDb.bannedWords.length === 0) return;
 
-        const sender = msg.author || msg.from;
-        const text = msg.body.toLowerCase();
+        // Verificar si contiene alguna palabra prohibida antes de pedir datos del chat
+        const foundWord = groupDb.bannedWords.find(word => text.includes(word.toLowerCase()));
+        if (!foundWord) return;
 
-        for (const bannedWord of groupDb.bannedWords) {
-            if (text.includes(bannedWord.toLowerCase())) {
+        const chat = await msg.getChat();
+        const sender = msg.author || msg.from;
                 try {
                     if (!groupDb.warns[sender]) {
                         groupDb.warns[sender] = 0;
