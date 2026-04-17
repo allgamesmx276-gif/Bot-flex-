@@ -57,63 +57,56 @@ async function isAdmin(client, msg) {
 
         const chat = await msg.getChat();
         const senderId = msg.author || msg.from;
-        
-        // WhatsApp Web.js a veces devuelve el ID con o sin el sufijo :index
-        const senderPure = senderId.split(':')[0].split('@')[0];
 
-        // FORZAR RECARGA DE PARTICIPANTES
-        try {
-            // Algunos entornos de puppeteer necesitan recargar el objeto chat
-            // para obtener la lista de participantes actualizada si hubo cambios recientes.
-            await chat.getContact(); 
-        } catch(e) {}
+        console.log(`--- DEBUG ADMIN START ---`);
+        console.log(`Chat: ${chatId}`);
+        console.log(`Sender ID: ${senderId}`);
 
-        let participant = (chat.participants || []).find(p => {
-            const pId = p.id._serialized;
-            const pPure = pId.split(':')[0].split('@')[0];
-            return pPure === senderPure;
-        });
+        // 1. Intento por ID directo
+        let participant = (chat.participants || []).find(p => p.id._serialized === senderId);
 
-        // --- MANEJO ESPECIAL PARA CUENTAS LID ---
-        // Si no se encontró por ID directo y es una cuenta LID, intentamos obtener su ID real
-        if (!participant && senderId.endsWith('@lid')) {
-            console.log(`[DEBUG_ADMIN] Buscando contacto real para cuenta LID: ${senderId}`);
+        // 2. Intento por Número Puro (Quitar @c.us, @lid, sufijos :1, etc)
+        if (!participant) {
+            const senderPure = senderId.split(':')[0].split('@')[0];
+            participant = (chat.participants || []).find(p => {
+                const pPure = p.id._serialized.split(':')[0].split('@')[0];
+                return pPure === senderPure;
+            });
+            if (participant) console.log(`[DEBUG] Found by Pure ID: ${senderPure}`);
+        }
+
+        // 3. Intento forzando resolución de contacto (Especial para LID -> c.us)
+        if (!participant) {
+            console.log(`[DEBUG] Not found in participants list. Attempting contact resolution...`);
             try {
                 const contact = await client.getContactById(senderId);
                 if (contact && contact.id && contact.id._serialized) {
                     const realId = contact.id._serialized;
                     const realPure = realId.split(':')[0].split('@')[0];
-                    console.log(`[DEBUG_ADMIN] LID transformado a ID real: ${realId}`);
-                    
+                    console.log(`[DEBUG] Resolved ID: ${realId}`);
+
                     participant = (chat.participants || []).find(p => {
-                        const pId = p.id._serialized;
-                        const pPure = pId.split(':')[0].split('@')[0];
+                        const pPure = p.id._serialized.split(':')[0].split('@')[0];
                         return pPure === realPure;
                     });
                 }
-            } catch (lidErr) {
-                console.error(`[DEBUG_ADMIN] Error procesando LID: ${lidErr.message}`);
+            } catch (e) {
+                console.log(`[DEBUG] Contact resolution failed: ${e.message}`);
             }
         }
 
         const result = !!participant && (participant.isAdmin || participant.isSuperAdmin);
-        
-        // LOGS AGRESIVOS DE DEBUG - COPIA ESTO SI FALLA
-        console.log(`--- DEBUG ADMIN START ---`);
-        console.log(`Chat: ${chatId}`);
-        console.log(`Sender ID: ${senderId} | Pure: ${senderPure}`);
-        console.log(`Total Participants in list: ${chat.participants ? chat.participants.length : 0}`);
-        
+
         if (!participant) {
-            console.log(`[!] SENDER NOT FOUND IN PARTICIPANT LIST`);
+            console.log(`[!] SENDER ${senderId} STILL NOT FOUND IN LIST`);
             if (chat.participants && chat.participants.length > 0) {
-                console.log(`Sample Participants Format:`);
-                chat.participants.slice(0, 3).forEach(p => console.log(` - ${p.id._serialized} (Admin: ${p.isAdmin})`));
+                console.log(`List Sample (3): ${chat.participants.slice(0, 3).map(p => p.id._serialized).join(', ')}`);
             }
         } else {
-            console.log(`Participant Found: ${participant.id._serialized} | isAdmin: ${participant.isAdmin} | isSuperAdmin: ${participant.isSuperAdmin}`);
+            console.log(`Participant Found: ${participant.id._serialized} | Admin: ${participant.isAdmin}`);
         }
-        console.log(`Result: ${result}`);
+
+        console.log(`Final Result: ${result}`);
         console.log(`--- DEBUG ADMIN END ---`);
 
         return result;
