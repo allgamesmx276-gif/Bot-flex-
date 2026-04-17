@@ -136,13 +136,16 @@ async function isBotAdmin(client, msg) {
 }
 
 // 📋 ADMIN REGISTRADO (DB)
-function isRegisteredAdmin(msg) {
+async function isRegisteredAdmin(client, msg) {
     const db = getDB();
     const senders = getPossibleSenderIds(msg);
     const ownerNumber = db.config?.ownerNumber;
 
-    // Si es el owner definido en config, siempre tiene acceso
+    // 1. Si es el owner definido en config, siempre tiene acceso
     if (isOwner(msg)) return true;
+
+    // 2. Si es ADMIN del grupo en WhatsApp, le damos acceso de "admin registrado" automáticamente
+    if (await isAdmin(client, msg)) return true;
 
     return senders.some(sender => {
         const pure = sender.split(':')[0].split('@')[0];
