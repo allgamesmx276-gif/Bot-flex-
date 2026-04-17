@@ -61,19 +61,40 @@ async function isAdmin(client, msg) {
         // WhatsApp Web.js a veces devuelve el ID con o sin el sufijo :index
         const senderPure = senderId.split(':')[0].split('@')[0];
 
-        // FORZAR RECARGA DE PARTICIPANTES (A veces WhatsApp Web.js tiene caché vieja)
-        if (chat.groupMetadata && typeof chat.fetchMessages === 'function') {
-            try {
-                // Truco para forzar una pequeña actualización
-                await chat.getContact(); 
-            } catch(e) {}
-        }
+        // FORZAR RECARGA DE PARTICIPANTES
+        try {
+            // Algunos entornos de puppeteer necesitan recargar el objeto chat
+            // para obtener la lista de participantes actualizada si hubo cambios recientes.
+            await chat.getContact(); 
+        } catch(e) {}
 
-        const participant = (chat.participants || []).find(p => {
+        let participant = (chat.participants || []).find(p => {
             const pId = p.id._serialized;
             const pPure = pId.split(':')[0].split('@')[0];
             return pPure === senderPure;
         });
+
+        // --- MANEJO ESPECIAL PARA CUENTAS LID ---
+        // Si no se encontró por ID directo y es una cuenta LID, intentamos obtener su ID real
+        if (!participant && senderId.endsWith('@lid')) {
+            console.log(`[DEBUG_ADMIN] Buscando contacto real para cuenta LID: ${senderId}`);
+            try {
+                const contact = await client.getContactById(senderId);
+                if (contact && contact.id && contact.id._serialized) {
+                    const realId = contact.id._serialized;
+                    const realPure = realId.split(':')[0].split('@')[0];
+                    console.log(`[DEBUG_ADMIN] LID transformado a ID real: ${realId}`);
+                    
+                    participant = (chat.participants || []).find(p => {
+                        const pId = p.id._serialized;
+                        const pPure = pId.split(':')[0].split('@')[0];
+                        return pPure === realPure;
+                    });
+                }
+            } catch (lidErr) {
+                console.error(`[DEBUG_ADMIN] Error procesando LID: ${lidErr.message}`);
+            }
+        }
 
         const result = !!participant && (participant.isAdmin || participant.isSuperAdmin);
         
@@ -85,7 +106,6 @@ async function isAdmin(client, msg) {
         
         if (!participant) {
             console.log(`[!] SENDER NOT FOUND IN PARTICIPANT LIST`);
-            // Listamos los primeros 3 para ver el formato que tienen
             if (chat.participants && chat.participants.length > 0) {
                 console.log(`Sample Participants Format:`);
                 chat.participants.slice(0, 3).forEach(p => console.log(` - ${p.id._serialized} (Admin: ${p.isAdmin})`));
