@@ -185,8 +185,16 @@ client.on('message_reaction', async (reaction) => {
 
         if (!db.userReactions[chatId]) db.userReactions[chatId] = {};
 
-        const authorId = reaction.msgId.participant;
-        if (!authorId) return;
+        const authorId = reaction.msgId.participant; // Autor del mensaje reaccionado
+        const reactorId = reaction.senderId; // Persona que reacciona
+        
+        if (!authorId || !reactorId) return;
+
+        // 🔥 NO PERMITIR AUTO-REACCIONES (Dar puntos a sus propios mensajes)
+        if (authorId === reactorId) {
+            console.log(`[RANK] Intento de auto-reacción detectado en ${chatId} por ${reactorId}. Ignorando puntos.`);
+            return;
+        }
 
         if (!db.userReactions[chatId][authorId]) {
             db.userReactions[chatId][authorId] = { pos: 0, neg: 0 };
