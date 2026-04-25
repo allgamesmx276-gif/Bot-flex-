@@ -8,15 +8,17 @@ function normalizeWhatsAppId(value) {
 }
 
 function getPossibleSenderIds(msg) {
+    if (!msg) return [];
+    
     return [
         msg.author,
         msg.from,
         msg.to,
-        msg.id && msg.id.participant,
-        msg._data && msg._data.author,
-        msg._data && msg._data.from,
-        msg._data && msg._data.to,
-        msg._data && msg._data.participant
+        msg.id ? msg.id.participant : null,
+        msg._data ? msg._data.author : null,
+        msg._data ? msg._data.from : null,
+        msg._data ? msg._data.to : null,
+        msg._data ? msg._data.participant : null
     ].filter(Boolean);
 }
 
@@ -136,7 +138,8 @@ async function isBotAdmin(client, msg) {
 }
 
 // 📋 ADMIN REGISTRADO (DB)
-async function isRegisteredAdmin(client, msg) {
+async function isRegisteredAdmin(msg, client) {
+    if (!msg) return false;
     const db = getDB();
     const senders = getPossibleSenderIds(msg);
     const chatId = msg.from;
@@ -144,8 +147,8 @@ async function isRegisteredAdmin(client, msg) {
     // 1. Si es el owner definido en config, siempre tiene acceso
     if (isOwner(msg)) return true;
 
-    // 2. Si es ADMIN del grupo en WhatsApp, le damos acceso automáticamente (PERMISO POR GRUPO)
-    if (chatId.endsWith('@g.us') && await isAdmin(client, msg)) return true;
+    // 2. Si es ADMIN del grupo en WhatsApp
+    if (chatId && chatId.endsWith('@g.us') && client && await isAdmin(client, msg)) return true;
 
     // 3. Verificar en la lista global de admins de la DB (Solo para comandos globales si es necesario)
     return senders.some(sender => {

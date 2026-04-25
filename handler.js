@@ -5,9 +5,13 @@ const { getChatPlan, getRequiredPlan, isPlanAllowed, isPlanExpired } = require('
 const logger = require('./utils/logger');
 
 let commands = [];
+const commandMap = new Map();
+const autoCommands = [];
 
 function loadCommands() {
     commands = [];
+    commandMap.clear();
+    autoCommands.length = 0;
 
     const basePath = './modules';
 
@@ -18,180 +22,129 @@ function loadCommands() {
 
     const folders = fs.readdirSync(basePath);
 
-    console.log('📂 Carpetas detectadas:', folders);
-
     for (const folder of folders) {
         const folderPath = `${basePath}/${folder}`;
 
-        // Ignorar si no es carpeta
         if (!fs.lstatSync(folderPath).isDirectory()) continue;
 
         const files = fs.readdirSync(folderPath)
             .filter(file => file.endsWith('.js'));
 
-        console.log(`📁 ${folder}:`, files);
-
         for (const file of files) {
             try {
-                const fullPath = `${folderPath}/${file}`;
+                const fullPath = `./modules/${folder}/${file}`;
+                const resolvedPath = require.resolve(fullPath);
 
-                delete require.cache[require.resolve(fullPath)];
+                delete require.cache[resolvedPath];
 
-                const command = require(fullPath);
+                const command = require(resolvedPath);
 
-                if (!command || !command.name) {
-                    console.log(`⚠️ Comando inválido: ${file}`);
-                    continue;
-                }
+                if (!command || !command.name) continue;
 
                 commands.push(command);
-                console.log(`✅ Cargado: ${command.name}`);
-
+                if (command.auto) {
+                    autoCommands.push(command);
+                } else {
+                    const name = command.name.toLowerCase();
+                    commandMap.set(name, command);
+                    if (command.aliases && Array.isArray(command.aliases)) {
+                        command.aliases.forEach(alias => commandMap.set(alias.toLowerCase(), command));
+                    }
+                }
             } catch (err) {
-                console.log(`❌ Error en ${file}:`, err.message);
+                console.log(`❌ Error cargando ${file}:`, err.message);
             }
         }
     }
-
-    console.log('🚀 TOTAL COMANDOS:', commands.length);
+    console.log(`🚀 Total comandos: ${commands.length} (${autoCommands.length} auto)`);
 }
+
 async function handleMessage(client, msg) {
     try {
-        if (!msg.body) {
-            console.log('🔇 Mensaje sin cuerpo, ignorando.');
-            return;
-        }
-
-        // 🔥 evitar doble ejecución
-        console.log(`🔍 Procesando en handler: "${msg.body.slice(0, 20)}..."`);
-
-        const dbState = getDB();
-        const prefix = dbState.config.prefix || '.';
-        console.log(`⚙️ Prefijo configurado: "${prefix}"`);
+        if (!msg.body) return;
 
         const body = String(msg.body).trim();
+        const dbState = getDB();
+        const prefix = dbState.config.prefix || '.';
         const isPrefixed = body.startsWith(prefix);
-        console.log(`🚩 ¿Tiene prefijo?: ${isPrefixed}`);
-
         const isGroupChat = msg.from.endsWith('@g.us');
-        const pausedInGroup = Boolean(
-            isGroupChat &&
-            dbState.pausedGroups &&
-            dbState.pausedGroups[msg.from]
-        );
-        
-        if (pausedInGroup) console.log('🛑 Grupo pausado');
 
-        // 🔒 grupo pausado o no procesable
+        const pausedInGroup = isGroupChat && dbState.pausedGroups?.[msg.from];
+        
         if (pausedInGroup) {
-            if (!isPrefixed || !body.toLowerCase().includes('bot')) {
-                console.log('⏭️ Ignorando por pausa en grupo');
-                return;
-            }
+            if (!isPrefixed || !body.toLowerCase().includes('bot')) return;
         }
 
-        // Si no es comando y no tiene prefijo, y ya verificamos que no es algo para "bot" en pausa,
-        // podemos hacer un check rápido para comandos auto o salir.
-        
-        // ⚡ comandos automáticos
-        let autoExecuted = 0;
-        for (const cmd of commands) {
-            if (!cmd.auto) continue;
-
+        // ⚡ Ejecución rápida de comandos automáticos
+        for (const cmd of autoCommands) {
             try {
-                // Los comandos auto deben ser ultra-rápidos
+                // Clave: solo marcamos como manejado si el comando auto lo decide p.ej. anti-link
                 await cmd.execute(client, msg);
-                autoExecuted++;
+                // Si un comando auto marca _flexHandled, detenemos el flujo para este mensaje
+                if (msg._flexHandled) return;
             } catch (err) {
-                console.log(`❌ Error en comando auto ${cmd.name}:`, err.message);
+                console.error(`Error en auto ${cmd.name}:`, err.message);
             }
         }
-        if (autoExecuted > 0) console.log(`⚡ Comandos auto ejecutados: ${autoExecuted}`);
 
-        // Si el comando fue marcado como manejado por un comando auto, detenemos el flujo
-        if (msg._flexHandled) {
-            console.log('✅ Marcado como manejado (_flexHandled)');
-            return;
-        }
-
-        if (!isPrefixed) {
-            console.log('⏭️ No tiene prefijo, terminando handleMessage');
-            return;
-        }
+        // Antes de los comandos con prefijo, nos aseguramos que _flexHandled sea false si no fue marcado por auto
+        if (msg._flexHandled || !isPrefixed) return;
 
         const args = body.slice(prefix.length).trim().split(/ +/);
         const commandName = (args.shift() || '').toLowerCase();
-        console.log(`⌨️ Comando intentado: "${commandName}"`);
+        
+        // 🎯 Búsqueda O(1) en el Map
+        const command = commandMap.get(commandName);
+        if (!command) return;
 
-        const command = commands.find(cmd => !cmd.auto && cmd.name === commandName);
-
-        if (!command) {
-            console.log(`❓ Comando "${commandName}" no encontrado.`);
-            return;
-        }
-
-        console.log(`🎯 Comando encontrado: ${command.name}. Verificando permisos...`);
         const owner = isOwner(msg);
 
-        // 🔒 owner only
         if (command.ownerOnly && !owner) {
             return msg.reply('Solo el owner puede usar este comando');
         }
 
-        // 🔒 admin
         if (!owner && command.category === 'admin' && !await isAdmin(client, msg)) {
             return client.sendMessage(msg.from, 'Solo los administradores del grupo pueden usar este comando');
         }
 
-        // 💼 sistema de planes
         if (!owner) {
-            const db = getDB();
-            const chatId = msg.from;
-            const sender = msg.author || msg.from;
-
-            // verificar expiración
-            if (isPlanExpired(db, chatId)) {
-                const expired = db.groupPlanExpiry?.[chatId];
-                const expiryDate = expired
-                    ? new Date(expired).toLocaleDateString('es-MX', {
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric'
-                    })
-                    : '';
-
-                db.groupPlans[chatId] = 'free';
-                delete db.groupPlanExpiry[chatId];
+            if (isPlanExpired(dbState, msg.from)) {
+                const expired = dbState.groupPlanExpiry?.[msg.from];
+                const expiryDate = expired ? new Date(expired).toLocaleDateString() : '';
+                dbState.groupPlans[msg.from] = 'free';
+                delete dbState.groupPlanExpiry[msg.from];
                 saveDB();
-
                 await msg.reply(`⚠️ Tu plan ha expirado (${expiryDate}). Ahora estás en plan FREE.`);
             }
 
-            const currentPlan = getChatPlan(db, chatId, sender);
+            const currentPlan = getChatPlan(dbState, msg.from, msg.author || msg.from);
             const requiredPlan = getRequiredPlan(command);
 
             if (!isPlanAllowed(currentPlan, requiredPlan)) {
-                return msg.reply(
-`⚠️ Este comando requiere plan *${requiredPlan}*
-💼 Plan actual: *${currentPlan}*
-
-Contacta al administrador del bot para mejorar tu plan.`
-                );
+                return msg.reply(`⚠️ Requiere plan *${requiredPlan}* (Actual: *${currentPlan}*)`);
             }
         }
 
-        // ✅ MARCAR COMO PROCESADO (CLAVE)
-        
-
-        // 🚀 ejecutar comando
-        console.log('👉 Ejecutando comando:', command.name);
         msg._flexHandled = true;
+        
+        // Simular que el bot está escribiendo y esperar 2 segundos
+        // Se comenta o reduce para mejorar la respuesta inmediata si es necesario
+        /*
+        try {
+            const chat = await msg.getChat();
+            await chat.sendStateTyping();
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (e) {
+            console.error('Error al enviar estado "escribiendo":', e.message);
+        }
+        */
+
         await command.execute(client, msg, args);
 
     } catch (err) {
         logger.error('Error general en handler', { error: err.message });
         if (!msg._flexHandled) {
-            msg.reply('❌ Error interno en el bot');
+            try { await msg.reply('❌ Error interno'); } catch {}
         }
     }
 }

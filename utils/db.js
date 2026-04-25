@@ -112,18 +112,33 @@ function readDBFile() {
 }
 
 let db = normalizeDB(readDBFile());
+let saveTimeout = null;
 
 function getDB() {
     return db;
 }
 
 function saveDB() {
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+    if (saveTimeout) return;
+    
+    saveTimeout = setTimeout(() => {
+        try {
+            // Guardado asíncrono para no bloquear el event loop
+            fs.writeFile(DB_FILE, JSON.stringify(db, null, 2), (err) => {
+                if (err) console.error('Error saving DB:', err.message);
+                saveTimeout = null;
+            });
+        } catch (err) {
+            console.error('Error in saveDB:', err.message);
+            saveTimeout = null;
+        }
+    }, 5000); // Guardar cada 5 segundos si hay cambios
 }
 
 function ensureDB() {
     db = normalizeDB(db);
-    saveDB();
+    // Forzamos guardado inmediato al inicio
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
     return db;
 }
 

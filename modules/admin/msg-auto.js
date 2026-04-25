@@ -11,7 +11,7 @@ module.exports = {
         const chat = await msg.getChat();
         const chatId = chat.id._serialized;
 
-        if (!isRegisteredAdmin(msg)) {
+        if (!await isRegisteredAdmin(msg, client)) {
             return msg.reply(error('Debes registrarte como admin primero'));
         }
 

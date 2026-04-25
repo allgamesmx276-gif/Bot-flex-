@@ -9,7 +9,7 @@ module.exports = {
     async execute(client, msg) {
         const chat = await msg.getChat();
 
-        if (!isRegisteredAdmin(msg)) {
+        if (!await isRegisteredAdmin(msg, client)) {
             return msg.reply(error('Debes registrarte como admin primero'));
         }
 

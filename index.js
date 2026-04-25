@@ -24,8 +24,7 @@ const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
         headless: true,
-        // Eliminamos executablePath para que Puppeteer use el que viene por defecto
-        // o lo busque automáticamente en el PATH del sistema.
+        authTimeoutMs: 120000, 
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -33,10 +32,17 @@ const client = new Client({
             '--disable-gpu',
             '--no-zygote',
             '--disable-extensions',
-            '--disable-accelerated-2d-canvas',
-            '--disable-setuid-sandbox',
-            '--no-first-run',
-            '--no-startup-window'
+            '--disable-background-networking',
+            '--disable-default-apps',
+            '--disable-sync',
+            '--disable-translate',
+            '--hide-scrollbars',
+            '--metrics-recording-only',
+            '--mute-audio',
+            '--safebrowsing-disable-auto-update',
+            '--ignore-certificate-errors',
+            '--ignore-ssl-errors',
+            '--ignore-certificate-errors-spki-list'
         ]
     }
 });
@@ -92,12 +98,17 @@ client.on('ready', () => {
         logger.error('Error init', { error: err.message });
     }
 
-    try {
-        backupNow('startup');
-    } catch {}
-
     loadCommands();
-    restartAllMsgAuto(client);
+
+    // Ejecutar tareas pesadas en segundo plano
+    setTimeout(() => {
+        try {
+            backupNow('startup');
+        } catch (e) {
+            console.error('Error in startup backup:', e.message);
+        }
+        restartAllMsgAuto(client);
+    }, 5000);
 });
 
 // ===============================
