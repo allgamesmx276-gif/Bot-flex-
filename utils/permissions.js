@@ -8,7 +8,7 @@ function normalizeWhatsAppId(value) {
 }
 
 function getPossibleSenderIds(msg) {
-    if (!msg) return [];
+    if (!msg || typeof msg !== 'object') return [];
     
     return [
         msg.author,
@@ -19,7 +19,7 @@ function getPossibleSenderIds(msg) {
         msg._data ? msg._data.from : null,
         msg._data ? msg._data.to : null,
         msg._data ? msg._data.participant : null
-    ].filter(Boolean);
+    ].filter(s => s && typeof s === 'string');
 }
 
 // 🔑 OWNER
