@@ -138,8 +138,13 @@ async function isBotAdmin(client, msg) {
 }
 
 // 📋 ADMIN REGISTRADO (DB)
-async function isRegisteredAdmin(msg, client) {
+async function isRegisteredAdmin(arg1, arg2) {
+    // Detectar cuál es el mensaje y cuál es el cliente
+    const msg = (arg1 && arg1.body) ? arg1 : ((arg2 && arg2.body) ? arg2 : null);
+    const client = (arg1 && arg1.info) ? arg1 : ((arg2 && arg2.info) ? arg2 : null);
+
     if (!msg) return false;
+    
     const db = getDB();
     const senders = getPossibleSenderIds(msg);
     const chatId = msg.from;
