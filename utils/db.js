@@ -119,20 +119,22 @@ function getDB() {
 }
 
 function saveDB() {
+    // Si ya hay un guardado pendiente, no hacemos nada
     if (saveTimeout) return;
     
     saveTimeout = setTimeout(() => {
         try {
             // Guardado asíncrono para no bloquear el event loop
-            fs.writeFile(DB_FILE, JSON.stringify(db, null, 2), (err) => {
-                if (err) console.error('Error saving DB:', err.message);
+            const data = JSON.stringify(db, null, 2);
+            fs.writeFile(DB_FILE, data, (err) => {
                 saveTimeout = null;
+                if (err) console.error('Error saving DB:', err.message);
             });
         } catch (err) {
-            console.error('Error in saveDB:', err.message);
             saveTimeout = null;
+            console.error('Error in saveDB:', err.message);
         }
-    }, 5000); // Guardar cada 5 segundos si hay cambios
+    }, 10000); // Aumentamos a 10 segundos para mayor estabilidad
 }
 
 function ensureDB() {

@@ -171,7 +171,7 @@ client.on('message', async msg => {
 
                 db.userActivity[chatId][sender].msgs++;
                 db.userActivity[chatId][sender].lastSeen = Date.now();
-                saveDB();
+                // Eliminamos saveDB() de aquí para evitar guardados constantes
             }
         } catch (_) {}
 
