@@ -22,6 +22,10 @@ const { POSITIVE_REACTIONS, NEGATIVE_REACTIONS } = require('./utils/rankSystem')
 const isLinux = process.platform === 'linux';
 const client = new Client({
     authStrategy: new LocalAuth(),
+    webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-js/main/dist/wppconnect-wa.js'
+    },
     puppeteer: {
         headless: true,
         authTimeoutMs: 120000, 
@@ -42,10 +46,20 @@ const client = new Client({
             '--safebrowsing-disable-auto-update',
             '--ignore-certificate-errors',
             '--ignore-ssl-errors',
-            '--ignore-certificate-errors-spki-list'
+            '--ignore-certificate-errors-spki-list',
+            '--disable-browser-side-navigation',
+            '--disable-features=IsolateOrigins,site-per-process',
+            '--js-flags="--max-old-space-size=400 --expose-gc"'
         ]
     }
 });
+
+// GC Periodic Trigger (Limited RAM environment)
+setInterval(() => {
+    if (global.gc) {
+        global.gc();
+    }
+}, 1000 * 60 * 15); // Clear heap every 15 minutes
 // ===============================
 // DB Y LOG
 // ===============================
@@ -141,39 +155,26 @@ client.on('group_join', async (notification) => {
 // MESSAGE (FIX PRINCIPAL)
 // ===============================
 client.on('message', async msg => {
-    console.log(`\n--- 📥 NUEVO MENSAJE ---`);
-    console.log(`De: ${msg.from}`);
-    console.log(`Cuerpo: "${msg.body}"`);
-    console.log(`Es de bot (fromMe): ${msg.fromMe}`);
-    console.log(`Tipo: ${msg.type}`);
+    // Evitar procesar mensajes de uno mismo o vacíos
+    if (msg.fromMe || !msg.body) return;
 
     try {
         const text = (msg.body || '').toLowerCase().trim();
 
-        // TEST
-        if (text === 'ping') {
-            console.log('🎯 Detectado "ping" simple, respondiendo...');
-            // await client.sendMessage(msg.from, 'pong 🏓');
-            // return;
-        }
+        // TRACK ACTIVIDAD (Optimizado: solo grupos)
+        if (msg.from.endsWith('@g.us')) {
+            const sender = msg.author || msg.from;
+            const chatId = msg.from;
+            const dbRef = getDB();
 
-        // TRACK ACTIVIDAD
-        try {
-            if (msg.from && msg.from.endsWith('@g.us') && !msg.fromMe) {
-                const sender = msg.author || msg.from;
-                const chatId = msg.from;
-                const db = getDB();
-
-                if (!db.userActivity[chatId]) db.userActivity[chatId] = {};
-                if (!db.userActivity[chatId][sender]) {
-                    db.userActivity[chatId][sender] = { msgs: 0, lastSeen: 0 };
-                }
-
-                db.userActivity[chatId][sender].msgs++;
-                db.userActivity[chatId][sender].lastSeen = Date.now();
-                // Eliminamos saveDB() de aquí para evitar guardados constantes
+            if (!dbRef.userActivity[chatId]) dbRef.userActivity[chatId] = {};
+            if (!dbRef.userActivity[chatId][sender]) {
+                dbRef.userActivity[chatId][sender] = { msgs: 0, lastSeen: 0 };
             }
-        } catch (_) {}
+
+            dbRef.userActivity[chatId][sender].msgs++;
+            dbRef.userActivity[chatId][sender].lastSeen = Date.now();
+        }
 
         // 🔥 Ejecutar todo a través de handleMessage (incluye auto y normales)
         await handleMessage(client, msg);
@@ -198,9 +199,9 @@ client.on('message_reaction', async (reaction) => {
         const chatId = reaction.msgId?.remote;
         if (!chatId || !chatId.endsWith('@g.us')) return;
 
-        const db = getDB();
+        const dbRef = getDB();
 
-        if (!db.userReactions[chatId]) db.userReactions[chatId] = {};
+        if (!dbRef.userReactions[chatId]) dbRef.userReactions[chatId] = {};
 
         const authorId = reaction.msgId.participant; // Autor del mensaje reaccionado
         const reactorId = reaction.senderId; // Persona que reacciona
@@ -213,12 +214,12 @@ client.on('message_reaction', async (reaction) => {
             return;
         }
 
-        if (!db.userReactions[chatId][authorId]) {
-            db.userReactions[chatId][authorId] = { pos: 0, neg: 0 };
+        if (!dbRef.userReactions[chatId][authorId]) {
+            dbRef.userReactions[chatId][authorId] = { pos: 0, neg: 0 };
         }
 
-        if (isPos) db.userReactions[chatId][authorId].pos++;
-        else db.userReactions[chatId][authorId].neg++;
+        if (isPos) dbRef.userReactions[chatId][authorId].pos++;
+        else dbRef.userReactions[chatId][authorId].neg++;
 
         saveDB();
 

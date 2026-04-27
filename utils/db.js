@@ -125,7 +125,7 @@ function saveDB() {
     saveTimeout = setTimeout(() => {
         try {
             // Guardado asíncrono para no bloquear el event loop
-            const data = JSON.stringify(db, null, 2);
+            const data = JSON.stringify(db); // FIX: Remove indentation for smaller file size & faster I/O
             fs.writeFile(DB_FILE, data, (err) => {
                 saveTimeout = null;
                 if (err) console.error('Error saving DB:', err.message);
@@ -134,7 +134,7 @@ function saveDB() {
             saveTimeout = null;
             console.error('Error in saveDB:', err.message);
         }
-    }, 10000); // Aumentamos a 10 segundos para mayor estabilidad
+    }, 30000); // FIX: Increase to 30 seconds to reduce I/O pressure
 }
 
 function ensureDB() {
