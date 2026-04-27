@@ -117,10 +117,3 @@ module.exports = {
         }
     }
 };
-
-        } catch (err) {
-            console.log('❌ Error menu:', err.message);
-            await client.sendMessage(msg.from, '❌ Error mostrando menú');
-        }
-    }
-};
